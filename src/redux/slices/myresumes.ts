@@ -1,9 +1,12 @@
+import { refreshAccessToken } from './../../tools/auth'
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import { GoogleDriveStorage, Resume as ResumeManager } from '@cooperation/vc-storage'
-import { getCookie } from '../../tools/cookie'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { GoogleDriveStorage, Resume as ResumeManager } from '@cooperation/vc-storage' //NOSONAR
+import { getLocalStorage } from '../../tools/cookie'
+import StorageService from '../../storage-singlton'
 
 // Define Resume Types
-interface IssuerInfo {
+export interface IssuerInfo {
   id: string
   name: string
   type: 'organization' | 'institution' | 'individual'
@@ -11,7 +14,7 @@ interface IssuerInfo {
   logo?: string
 }
 
-interface VerificationCredential {
+export interface VerificationCredential {
   vcId?: string
   vcDid?: string
   issuer: IssuerInfo
@@ -20,14 +23,15 @@ interface VerificationCredential {
   status: 'valid' | 'expired' | 'revoked'
 }
 
-interface VerifiableItem {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export interface VerifiableItem {
   id: string
   verificationStatus: 'unverified' | 'pending' | 'verified'
   verifiedCredentials?: VerificationCredential[]
   isVisible?: boolean
 }
 
-interface Contact {
+export interface Contact {
   fullName: string
   email: string
   phone?: string
@@ -40,11 +44,12 @@ interface Contact {
     linkedin?: string
     github?: string
     portfolio?: string
-    twitter?: string
+    instagram?: string
   }
 }
 
-interface Resume {
+export interface Resume {
+  fullName: string
   id: string
   lastUpdated: string
   name: string
@@ -52,6 +57,9 @@ interface Resume {
   contact: Contact
   summary: string
   content: {
+    issuanceDate: string | number | Date
+    credentialSubject: any
+    contact: any
     resume: any
   }
 }
@@ -71,22 +79,59 @@ const initialState: ResumeState = {
   error: null
 }
 
-// ✅ Fetch Resumes (Signed & Unsigned)
 export const fetchUserResumes = createAsyncThunk('resume/fetchUserResumes', async () => {
-  const accessToken = getCookie('auth_token')
-  if (!accessToken) {
-    throw new Error('Access token not found')
-  }
+  try {
+    const accessToken = getLocalStorage('auth')
+    const refreshToken = getLocalStorage('refresh_token')
 
-  const storage = new GoogleDriveStorage(accessToken)
-  const resumeManager = new ResumeManager(storage)
+    if (!accessToken || !refreshToken) {
+      throw new Error('No authentication token found. Please sign in to view your resumes.')
+    }
 
-  const resumeVCs = await resumeManager.getSignedResumes()
-  const resumeSessions = await resumeManager.getNonSignedResumes()
+    // Get singleton instance and initialize it
+    const storageService = StorageService.getInstance()
+    storageService.initialize(accessToken)
 
-  return {
-    signed: resumeVCs,
-    unsigned: resumeSessions
+    // Get the resume manager from the service
+    const resumeManager = storageService.getResumeManager()
+
+    // Fetch resumes
+    const resumeVCs = await resumeManager.getSignedResumes()
+    const resumeSessions = await resumeManager.getNonSignedResumes()
+
+    return {
+      signed: resumeVCs,
+      unsigned: resumeSessions
+    }
+  } catch (error) {
+    console.error('Error fetching resumes:', error)
+    
+    // Check for authentication errors
+    if (error instanceof Error) {
+      // Google Drive authentication errors
+      if (error.message.includes('401') || 
+          error.message.includes('authentication') || 
+          error.message.includes('OAuth') ||
+          error.message.includes('credential')) {
+        throw new Error('Authentication expired. Please sign in again to access your resumes.')
+      }
+      
+      // Check for refresh token errors
+      if (/auth|token|credential|OAuth|authentication/i.test(error.message)) {
+        try {
+
+          await refreshAccessToken(getLocalStorage('refresh_token') as string)
+          // If refresh succeeds, throw a more user-friendly error
+          throw new Error('Please refresh the page to continue.')
+        } catch (refreshError) {
+          console.error('Failed to refresh token:', refreshError)
+          throw new Error('Session expired. Please sign in again.')
+        }
+      }
+    }
+    
+    // For any other errors, throw a generic message
+    throw new Error('Unable to load resumes. Please try again later.')
   }
 })
 
@@ -128,25 +173,14 @@ const resumeSlice = createSlice({
     // ✅ Duplicate Resume (with new ID and updated title)
     duplicateResume: (
       state,
-      action: PayloadAction<{ id: string; type: 'signed' | 'unsigned' }>
+      action: PayloadAction<{
+        id: string
+        type: 'signed' | 'unsigned'
+        resume: Resume
+      }>
     ) => {
-      const { id, type } = action.payload
-      const resumeToDuplicate = state[type].find(resume => resume.id === id)
-
-      if (resumeToDuplicate) {
-        const newResume = {
-          ...JSON.parse(JSON.stringify(resumeToDuplicate)), // Deep clone
-          id: `${resumeToDuplicate.id}`,
-          content: {
-            ...resumeToDuplicate.content,
-            resume: {
-              ...resumeToDuplicate.content.resume,
-              title: `${resumeToDuplicate.content.resume.title}`
-            }
-          }
-        }
-        state[type].push(newResume)
-      }
+      const { type, resume } = action.payload
+      state[type].push(resume)
     },
 
     // ✅ Delete Resume

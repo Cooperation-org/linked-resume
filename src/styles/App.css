@@ -45,12 +45,12 @@ button {
 .resume-card-actions {
   border-radius: 8rem;
   border: solid 1px #3c4599;
-  color: #414FCD;
+  color: #414fcd;
 }
 
 /* active rightsidebar for chelidren of resume-card-actions class except for the last child */
 
-.resume-card-actions>*:not(:last-child) {
+.resume-card-actions > *:not(:last-child) {
   border-radius: 0%;
   border-right: solid 1px #3c4599;
 }

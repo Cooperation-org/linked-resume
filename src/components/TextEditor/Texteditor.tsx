@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import ReactQuill, { Quill } from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 import { Box } from '@mui/material'
@@ -10,9 +10,15 @@ const BaseClipboard = Quill.import('modules/clipboard')
 
 const icons = Quill.import('ui/icons')
 icons['link-to-credentials'] =
-  `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
-  <path d="M12 8V16M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="25" viewBox="0 0 24 25" fill="none">
+  <g clip-path="url(#clip0_1381_33743)">
+    <path d="M4 6.67578H2V20.6758C2 21.7808 2.895 22.6758 4 22.6758H18V20.6758H4V6.67578ZM20 2.67578H8C6.895 2.67578 6 3.57078 6 4.67578V16.6758C6 17.7808 6.895 18.6758 8 18.6758H20C21.105 18.6758 22 17.7808 22 16.6758V4.67578C22 3.57078 21.105 2.67578 20 2.67578ZM19 11.6758H15V15.6758H13V11.6758H9V9.67578H13V5.67578H15V9.67578H19V11.6758Z" fill="#000"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_1381_33743">
+      <rect width="24" height="24" fill="white" transform="translate(0 0.675781)"/>
+    </clipPath>
+  </defs>
 </svg>`
 
 icons['undo'] = `<svg viewBox="0 0 18 18">
@@ -69,12 +75,23 @@ interface TextEditorProps {
   value: string
   onChange: (value: string) => void
   onAddCredential?: (text: string) => void
+  onFocus?: () => void
 }
 
-function TextEditor({ value, onChange, onAddCredential }: Readonly<TextEditorProps>) {
+// Generate unique ID for each editor instance
+let editorCounter = 0
+
+function TextEditor({
+  value,
+  onChange,
+  onAddCredential,
+  onFocus
+}: Readonly<TextEditorProps>) {
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [selectedTextRange, setSelectedTextRange] = useState<any>(null)
   const quillRef = React.useRef<any>(null)
+  const editorIdRef = useRef(`editor-${++editorCounter}-${Date.now()}`)
+  const lastValueRef = useRef(value)
 
   const modules = useMemo(
     () => ({
@@ -119,6 +136,22 @@ function TextEditor({ value, onChange, onAddCredential }: Readonly<TextEditorPro
 
   const formats = ['bold', 'italic', 'underline', 'strike', 'link', 'list', 'bullet']
 
+  // Ensure proper cleanup and value synchronization
+  useEffect(() => {
+    // Only update if value actually changed to prevent unnecessary re-renders
+    if (value !== lastValueRef.current && quillRef.current) {
+      const quill = quillRef.current.getEditor()
+      if (quill && quill.root.innerHTML !== value) {
+        const selection = quill.getSelection()
+        quill.root.innerHTML = value || ''
+        if (selection) {
+          quill.setSelection(selection)
+        }
+      }
+      lastValueRef.current = value
+    }
+  }, [value])
+
   const handleCredentialSelect = (selectedCredentials: string[]) => {
     if (selectedTextRange && selectedCredentials.length > 0) {
       const quill = quillRef.current?.getEditor()
@@ -147,22 +180,35 @@ function TextEditor({ value, onChange, onAddCredential }: Readonly<TextEditorPro
     }
   }
 
+  // Handle change with proper isolation
+  const handleChange = (newValue: string) => {
+    lastValueRef.current = newValue
+    onChange(newValue)
+  }
+
   return (
     <Box
       sx={{ width: '100%', borderRadius: '8px', height: 'auto', position: 'relative' }}
+      onFocus={onFocus}
+      data-editor-id={editorIdRef.current}
     >
-      <Box className='text-editor-container' sx={{ borderRadius: '8px', height: 'auto' }}>
+      <Box
+        className='text-editor-container'
+        sx={{ borderRadius: '8px', height: 'auto' }}
+        onFocus={onFocus}
+      >
         <ReactQuill
           ref={quillRef}
           theme='snow'
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
           modules={modules}
           formats={formats}
           placeholder={
             'Add and edit text here \n\nUse the toolbar to markup your text as follows:\n• Bold\n• Italic\n• Add links\n• Unordered lists\n• Undo / redo\n• Add credentials'
           }
           style={{ marginTop: '4px', borderRadius: '8px', height: 'auto' }}
+          onFocus={onFocus}
         />
       </Box>
       {showCredentialsOverlay && (

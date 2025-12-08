@@ -1,9 +1,25 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Box, Typography, Button, Checkbox, styled } from '@mui/material'
+import { useDispatch, useSelector } from 'react-redux'
+import { AppDispatch } from '../redux/store'
+import { fetchVCs } from '../redux/slices/vc'
 
 interface CredentialOverlayProps {
   onClose?: () => void
   onSelect: (selectedCredentials: string[]) => void
+  initialSelectedCredentials?: Array<{ id: string; url?: string; name?: string }>
+}
+
+interface CredentialItem {
+  originalItem?: {
+    id: string
+  }
+  id: string
+  credentialSubject?: {
+    achievement: Array<{
+      name: string
+    }>
+  }
 }
 
 const StyledScrollbar = styled(Box)({
@@ -20,36 +36,112 @@ const StyledScrollbar = styled(Box)({
   }
 })
 
-const CredentialOverlay: React.FC<CredentialOverlayProps> = ({ onClose, onSelect }) => {
-  const [selectedCredentials, setSelectedCredentials] = useState<string[]>([])
+const getCredentialName = (vc: any): string => {
+  try {
+    if (!vc || typeof vc !== 'object') {
+      return ''
+    }
 
-  const credentials = [
-    { id: '1', name: 'Case Study' },
-    { id: '2', name: 'Google UX Certification' },
-    { id: '3', name: 'Coursera UX Design Essentials for Enterprise Designers' },
-    { id: '4', name: 'Lorem ipsum dolor sit amet nuit' },
-    { id: '5', name: 'Lorem ipsum dolor sit amet nuit' },
-    { id: '6', name: 'Lorem ipsum dolor sit amet nuit' },
-    { id: '7', name: 'Lorem ipsum dolor sit amet nuit' },
-    { id: '8', name: 'Lorem ipsum dolor sit amet nuit' },
-    { id: '9', name: 'Lorem ipsum dolor sit amet nuit' },
-    { id: '10', name: 'Lorem ipsum dolor sit amet nuit' }
-  ]
+    const credentialSubject = vc.credentialSubject
+    if (!credentialSubject || typeof credentialSubject !== 'object') {
+      return ''
+    }
+
+    if (credentialSubject.employeeName) {
+      return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
+    }
+    if (credentialSubject.volunteerWork) {
+      return `Volunteer: ${credentialSubject.volunteerWork}`
+    }
+    if (credentialSubject.role) {
+      return `Employment: ${credentialSubject.role}`
+    }
+    if (credentialSubject.credentialName) {
+      return credentialSubject.credentialName
+    }
+
+    if (
+      Array.isArray(credentialSubject.achievement) &&
+      credentialSubject.achievement.length > 0 &&
+      credentialSubject.achievement[0]?.name
+    ) {
+      return credentialSubject.achievement[0].name
+    }
+
+    return ''
+  } catch (error) {
+    console.error('Error getting credential name:', error)
+    return ''
+  }
+}
+
+const getValidVCs = (vcs: any[]): any[] => {
+  if (!Array.isArray(vcs)) return []
+
+  return vcs.filter(vc => {
+    try {
+      if (!vc || typeof vc !== 'object') {
+        return false
+      }
+
+      if (!vc.credentialSubject || typeof vc.credentialSubject !== 'object') {
+        return false
+      }
+
+      const credentialName = getCredentialName(vc)
+      if (!credentialName || credentialName.trim() === '') {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error validating VC:', error)
+      return false
+    }
+  })
+}
+
+const CredentialOverlay: React.FC<CredentialOverlayProps> = ({
+  onClose,
+  onSelect,
+  initialSelectedCredentials = []
+}) => {
+  const initialSelectedIDs = initialSelectedCredentials.map(cred => cred.id)
+  const [selectedCredentials, setSelectedCredentials] =
+    useState<string[]>(initialSelectedIDs)
+
+  const dispatch: AppDispatch = useDispatch()
+  const { vcs } = useSelector((state: any) => state.vcReducer)
+
+  // Filter out invalid VCs
+  const validVCs = getValidVCs(vcs)
+
+  useEffect(() => {
+    // Dispatch the thunk to fetch VCs
+    dispatch(fetchVCs())
+  }, [dispatch])
 
   const handleSelectAll = () => {
-    if (selectedCredentials.length === credentials.length) {
+    if (selectedCredentials.length === validVCs.length) {
       setSelectedCredentials([])
     } else {
-      setSelectedCredentials(credentials.map(cred => cred.id))
+      setSelectedCredentials(
+        validVCs.map((cred: CredentialItem) => cred?.originalItem?.id || cred.id)
+      )
     }
   }
 
-  const handleToggleCredential = (credentialId: string) => {
-    setSelectedCredentials(prev =>
-      prev.includes(credentialId)
+  const handleToggleCredential = (credential: CredentialItem) => {
+    const credentialId = credential?.originalItem?.id || credential.id
+    
+    
+    setSelectedCredentials(prev => {
+      const newSelection = prev.includes(credentialId)
         ? prev.filter(id => id !== credentialId)
         : [...prev, credentialId]
-    )
+      
+      return newSelection
+    })
   }
 
   const handleClear = () => {
@@ -57,7 +149,20 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({ onClose, onSelect
   }
 
   const handleContinue = () => {
-    onSelect(selectedCredentials)
+    console.log('CredentialsOverlay handleContinue clicked', {
+      selectedCredentials,
+      isArray: Array.isArray(selectedCredentials)
+    })
+    
+    if (Array.isArray(selectedCredentials)) {
+      // Deduplicate by ID before passing to onSelect
+      const deduped = Array.from(new Set(selectedCredentials))
+      
+      onSelect(deduped)
+    } else {
+      
+      onSelect([])
+    }
     onClose?.()
   }
 
@@ -138,7 +243,9 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({ onClose, onSelect
                 }}
               >
                 <Checkbox
-                  checked={selectedCredentials.length === credentials.length}
+                  checked={
+                    selectedCredentials.length === validVCs.length && validVCs.length > 0
+                  }
                   onChange={handleSelectAll}
                   sx={{
                     '&.Mui-checked': {
@@ -158,37 +265,43 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({ onClose, onSelect
                 </Typography>
               </Box>
 
-              {credentials.map((credential, index) => (
-                <Box
-                  key={credential.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    py: '10px',
-                    mb: index === credentials.length - 1 ? 0 : '12px'
-                  }}
-                >
-                  <Checkbox
-                    checked={selectedCredentials.includes(credential.id)}
-                    onChange={() => handleToggleCredential(credential.id)}
+              {validVCs.map((credential: CredentialItem, index: number) => {
+                const credentialName = getCredentialName(credential)
+
+                return (
+                  <Box
+                    key={credential.id || index}
                     sx={{
-                      '&.Mui-checked': {
-                        color: '#3A35A2'
-                      }
-                    }}
-                  />
-                  <Typography
-                    sx={{
-                      color: '#2563EB',
-                      fontSize: '18px',
-                      fontWeight: 700,
-                      fontFamily: 'Nunito Sans'
+                      display: 'flex',
+                      alignItems: 'center',
+                      py: '10px',
+                      mb: index === validVCs.length - 1 ? 0 : '12px'
                     }}
                   >
-                    {credential.name}
-                  </Typography>
-                </Box>
-              ))}
+                    <Checkbox
+                      checked={selectedCredentials.includes(
+                        credential?.originalItem?.id || credential.id
+                      )}
+                      onChange={() => handleToggleCredential(credential)}
+                      sx={{
+                        '&.Mui-checked': {
+                          color: '#3A35A2'
+                        }
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        color: '#2563EB',
+                        fontSize: '18px',
+                        fontWeight: 700,
+                        fontFamily: 'Nunito Sans'
+                      }}
+                    >
+                      {credentialName || 'Unnamed Credential'}
+                    </Typography>
+                  </Box>
+                )
+              })}
             </StyledScrollbar>
           </Box>
         </Box>
@@ -226,8 +339,12 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({ onClose, onSelect
             Cancel
           </Button>
           <Button
-            onClick={handleContinue}
+            onClick={() => {
+              
+              handleContinue()
+            }}
             variant='contained'
+            disabled={selectedCredentials.length === 0}
             sx={{
               color: '#fff',
               bgcolor: '#6B79F6',
@@ -242,6 +359,11 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({ onClose, onSelect
               border: '3px solid #6B79F6',
               '&:hover': {
                 bgcolor: '#292489'
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#9EA3F3',
+                color: '#fff',
+                opacity: 0.7
               }
             }}
           >

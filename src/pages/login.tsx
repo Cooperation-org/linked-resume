@@ -7,7 +7,8 @@ import {
   SVGAddGreenCheck,
   SVGHelpSection,
   SVGHeroicon2,
-  SVGHeroicon1
+  SVGHeroicon1,
+  SVGSmallLine
 } from '../assets/svgs'
 
 interface FeatureListItemProps {
@@ -34,7 +35,7 @@ const FeatureListItem: React.FC<FeatureListItemProps> = ({ text }) => (
 const DigitalWalletLogin: React.FC = () => {
   const features = [
     'Secure storage for credentials',
-    'Embed credentials from your wallet into your resume',
+    'Embed credentials from your Wallet into your resume',
     'Easy sharing with employers or institutions',
     'Ownership and control of your personal data'
   ]
@@ -68,18 +69,28 @@ const DigitalWalletLogin: React.FC = () => {
           >
             <Box sx={{ p: { xs: 4 } }}>
               <Typography
-                sx={{ fontSize: '55px' }}
-                variant='h4'
-                component='h1'
-                gutterBottom
+                sx={{
+                  fontSize: '45px',
+                  fontWeight: 700,
+                  fontFamily: 'Poppins',
+                  lineHeight: '60px',
+                  mb: '15px',
+                  color: '#44474D'
+                }}
               >
-                Login or Sign Up with a Digital Wallet
+                Login or Sign Up with Google Drive
               </Typography>
-              <Typography variant='body1' color='text.secondary'>
-                A digital wallet securely stores your credentials and allows
-              </Typography>
-              <Typography variant='body1' color='text.secondary'>
-                you to manage and share your information easily.
+              <Typography
+                sx={{
+                  fontSize: '20px',
+                  fontWeight: 500,
+                  fontFamily: 'Nunito Sans',
+                  lineHeight: '30px',
+                  color: '#2E2E48'
+                }}
+              >
+                A digital Wallet securely stores your credentials and allows you to manage
+                and share your information easily.
               </Typography>
 
               <Box sx={{ my: 4 }}>
@@ -97,7 +108,7 @@ const DigitalWalletLogin: React.FC = () => {
               >
                 <Button
                   variant='contained'
-                  onClick={() => (window.location.href = '/login/wallet')}
+                  onClick={() => (window.location.href = '/login-scan')}
                   sx={{
                     bgcolor: '#FFF',
                     color: '#4527A0',
@@ -111,7 +122,7 @@ const DigitalWalletLogin: React.FC = () => {
                 </Button>
                 <Button
                   variant='contained'
-                  onClick={() => (window.location.href = '/login/wallet')}
+                  onClick={() => (window.location.href = '/signup')}
                   sx={{
                     bgcolor: '#FFF',
                     color: '#4527A0',
@@ -125,18 +136,60 @@ const DigitalWalletLogin: React.FC = () => {
                 </Button>
               </Box>
 
-              <Typography variant='caption' sx={{ display: 'block', mt: 2 }}>
-                We currently support Learner Credential Wallet, an open source mobile
-                wallet app developed by the Digital Credentials Consortium.
+              <Typography
+                variant='caption'
+                sx={{
+                  display: 'block',
+                  mt: 2,
+                  fontFamily: 'Nunito Sans',
+                  fontSize: '13px'
+                }}
+              >
+                We currently support
+                <Box component='span' sx={{ fontWeight: 700 }}>
+                  Learner Credential Wallet
+                </Box>
+                , an open source mobile Wallet app developed by the{' '}
+                <Box component='span' sx={{ textDecoration: 'underline' }}>
+                  Digital Credentials Consortium
+                </Box>
+                .
               </Typography>
 
-              <Box sx={{ mt: 3 }}>
-                <Typography variant='body2'>
-                  Don't see the wallet you want?{' '}
-                  <Link href='#' color='primary'>
-                    Send us an email to add it to our roadmap
-                  </Link>
+              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column' }}>
+                <Typography
+                  sx={{
+                    color: 'var(--Text-Primary-Text, #2E2E48)',
+                    fontFamily: 'Nunito Sans',
+                    fontSize: '21px',
+                    fontStyle: 'normal',
+                    fontWeight: 700,
+                    lineHeight: '34px',
+                    letterSpacing: '-0.24px'
+                  }}
+                >
+                  Don't see the Wallet you want?{' '}
                 </Typography>
+                <Link
+                  href='#'
+                  sx={{
+                    color: 'var(--Primary-Link, #2563EB)',
+                    fontFamily: 'Nunito Sans',
+                    fontSize: '21px',
+                    fontStyle: 'normal',
+                    fontWeight: 400,
+                    lineHeight: '34px',
+                    letterSpacing: '-0.24px',
+                    textDecorationLine: 'underline',
+                    textDecorationStyle: 'solid',
+                    textDecorationSkipInk: 'auto',
+                    textDecorationThickness: 'auto',
+                    textUnderlineOffset: 'auto',
+                    textUnderlinePosition: 'from-font'
+                  }}
+                >
+                  Send us an email to add it to our roadmap
+                </Link>
               </Box>
             </Box>
           </Box>
@@ -161,6 +214,9 @@ const DigitalWalletLogin: React.FC = () => {
               }}
             >
               <img src={img} alt='Solar panel worker' />
+            </Box>
+            <Box sx={{ position: 'absolute', top: '32%', left: '41%', zIndex: 111 }}>
+              <SVGSmallLine />
             </Box>
             <Box sx={{ position: 'absolute', top: '26%', left: '43%', zIndex: 111 }}>
               <SVGHelpSection />

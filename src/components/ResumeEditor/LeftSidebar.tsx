@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import {
   Box,
   TextField,
@@ -7,7 +6,8 @@ import {
   InputAdornment,
   FormLabel
 } from '@mui/material'
-
+import { useDispatch, useSelector } from 'react-redux'
+import { RootState } from '../../redux/store'
 import {
   SVGSectionIcon,
   SVGMail,
@@ -15,30 +15,68 @@ import {
   SVGLocation,
   SVGLinkedIn,
   SVGURL,
-  SVGSearch,
   SVGAdd,
   SVGInstagram
 } from '../../assets/svgs'
-
-interface LeftSidebarProps {
-  highlightedText: string
-  credentials: string[]
-  tooltipPosition: { top: number; left: number } | null
-}
+import { updateSection } from '../../redux/slices/resume'
+import LanguageField from '../LanguageAutocomplete'
 
 export const leftSections: (keyof Resume)[] = ['contact', 'languages']
 
 const LeftSidebar = () => {
-  const [input1, setInput1] = useState('')
-  const [input2, setInput2] = useState('')
-  const [input3, setInput3] = useState('')
-  const [input4, setInput4] = useState('')
-  const [input5, setInput5] = useState('')
-  const [input6, setInput6] = useState('')
-  const [input7, setInput7] = useState('')
-  const [input8, setInput8] = useState('')
-  const [input9, setInput9] = useState('')
-  const [input10, setInput10] = useState('')
+  const dispatch = useDispatch()
+  const resume = useSelector((state: RootState) => state.resume.resume)
+
+  const handleContactChange = (field: string, value: string) => {
+    if (!resume) return
+
+    let updatedContact = { ...resume.contact }
+
+    if (field === 'location') {
+      // Store the location value directly without processing
+      updatedContact = {
+        ...updatedContact,
+        location: {
+          ...updatedContact.location,
+          city: value // Store the raw input value
+        } as any
+      }
+    } else {
+      updatedContact = {
+        ...updatedContact,
+        [field]: value
+      }
+    }
+
+    dispatch(updateSection({ sectionId: 'contact', content: updatedContact }))
+  }
+
+  const handleLinksChange = (field: string, value: string) => {
+    if (!resume) return
+
+    const updatedLinks = {
+      ...resume.contact.socialLinks,
+      [field]: value
+    }
+
+    const updatedContact = {
+      ...resume.contact,
+      socialLinks: updatedLinks
+    }
+
+    dispatch(updateSection({ sectionId: 'contact', content: updatedContact }))
+  }
+
+  const handleCustomSectionAdd = (sectionName: string) => {
+    if (!resume || !sectionName.trim()) return
+
+    dispatch(
+      updateSection({
+        sectionId: sectionName.toLowerCase().replace(/\s+/g, '_'),
+        content: { items: [] }
+      })
+    )
+  }
 
   const paperStyle = {
     display: 'flex',
@@ -61,6 +99,7 @@ const LeftSidebar = () => {
     lineHeight: 'normal',
     letterSpacing: '0.16px'
   }
+
   const boxStyle = {
     width: '24px',
     height: '24px',
@@ -89,7 +128,7 @@ const LeftSidebar = () => {
       display='flex'
       flexDirection='column'
       bgcolor='#FFFFFF'
-      sx={{ width: 300, gap: '30px' }}
+      sx={{ width: { xs: '100%', md: '25%' }, gap: '30px' }}
     >
       <Paper sx={paperStyle}>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -103,8 +142,8 @@ const LeftSidebar = () => {
           <TextField
             placeholder='Enter your full name'
             fullWidth
-            value={input1}
-            onChange={e => setInput1(e.target.value)}
+            value={resume?.contact?.fullName || ''}
+            onChange={e => handleContactChange('fullName', e.target.value)}
             size='small'
             sx={placeholderStyle}
           />
@@ -118,8 +157,8 @@ const LeftSidebar = () => {
             <TextField
               placeholder='Enter a valid email address'
               fullWidth
-              value={input2}
-              onChange={e => setInput2(e.target.value)}
+              value={resume?.contact?.email || ''}
+              onChange={e => handleContactChange('email', e.target.value)}
               size='small'
               sx={placeholderStyle}
             />
@@ -134,8 +173,8 @@ const LeftSidebar = () => {
             <TextField
               placeholder='###-###-####'
               fullWidth
-              value={input3}
-              onChange={e => setInput3(e.target.value)}
+              value={resume?.contact?.phone || ''}
+              onChange={e => handleContactChange('phone', e.target.value)}
               size='small'
               sx={placeholderStyle}
             />
@@ -143,17 +182,31 @@ const LeftSidebar = () => {
         </Box>
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
           <FormLabel sx={labelStyles}>Location</FormLabel>
-          <Box sx={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-            <Box sx={boxStyle}>
+          <Box sx={{ display: 'flex', gap: '5px', alignItems: 'center', width: '100%' }}>
+            <Box sx={{ ...boxStyle, alignSelf: 'flex-start', mt: 1 }}>
               <SVGLocation />
             </Box>
             <TextField
-              placeholder='City, state or province'
+              placeholder='Address, City, State, Country, Postal Code'
               fullWidth
-              value={input4}
-              onChange={e => setInput4(e.target.value)}
-              size='small'
-              sx={placeholderStyle}
+              multiline
+              minRows={2}
+              maxRows={4}
+              value={resume?.contact?.location?.city || ''}
+              onChange={e => handleContactChange('location', e.target.value)}
+              sx={{
+                ...placeholderStyle,
+                width: '100%',
+                '& .MuiInputBase-root': {
+                  alignItems: 'flex-start',
+                  padding: '8px 12px'
+                },
+                '& .MuiOutlinedInput-input': {
+                  overflowY: 'auto',
+                  resize: 'none',
+                  minHeight: '60px'
+                }
+              }}
             />
           </Box>
         </Box>
@@ -175,8 +228,8 @@ const LeftSidebar = () => {
             <TextField
               placeholder='https://'
               fullWidth
-              value={input5}
-              onChange={e => setInput5(e.target.value)}
+              value={resume?.contact?.socialLinks?.portfolio || ''}
+              onChange={e => handleLinksChange('portfolio', e.target.value)}
               size='small'
               sx={placeholderStyle}
             />
@@ -202,8 +255,8 @@ const LeftSidebar = () => {
             <TextField
               placeholder='Enter your LinkedIn URL'
               fullWidth
-              value={input6}
-              onChange={e => setInput6(e.target.value)}
+              value={resume?.contact?.socialLinks?.linkedin || ''}
+              onChange={e => handleLinksChange('linkedin', e.target.value)}
               size='small'
               sx={placeholderStyle}
             />
@@ -218,8 +271,8 @@ const LeftSidebar = () => {
             <TextField
               placeholder='Enter your Instagram URL'
               fullWidth
-              value={input7}
-              onChange={e => setInput7(e.target.value)}
+              value={resume?.contact?.socialLinks?.instagram || ''}
+              onChange={e => handleLinksChange('instagram', e.target.value)}
               size='small'
               sx={placeholderStyle}
             />
@@ -234,8 +287,8 @@ const LeftSidebar = () => {
             <TextField
               placeholder='Enter a URL'
               fullWidth
-              value={input8}
-              onChange={e => setInput8(e.target.value)}
+              value={resume?.contact?.socialLinks?.github || ''} // Using github field for custom URL
+              onChange={e => handleLinksChange('github', e.target.value)}
               size='small'
               sx={placeholderStyle}
             />
@@ -251,33 +304,7 @@ const LeftSidebar = () => {
           </Typography>
         </Box>
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <TextField
-            placeholder='Which languages do you speak?'
-            fullWidth
-            value={input9}
-            onChange={e => setInput9(e.target.value)}
-            size='small'
-            InputProps={{
-              endAdornment: (
-                <InputAdornment
-                  sx={{ display: 'flex', alignItems: 'center', mt: 1 }}
-                  position='end'
-                >
-                  <SVGSearch />
-                </InputAdornment>
-              )
-            }}
-            sx={{
-              bgcolor: '#F3F5F8',
-              borderRadius: '3px',
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': { border: 'none' },
-                '&:hover fieldset': { border: 'none' },
-                '&.Mui-focused fieldset': { border: 'none' }
-              },
-              ...placeholderStyle
-            }}
-          />
+          <LanguageField />
         </Box>
       </Paper>
 
@@ -289,8 +316,6 @@ const LeftSidebar = () => {
           <TextField
             placeholder='Name this section'
             fullWidth
-            value={input10}
-            onChange={e => setInput10(e.target.value)}
             size='small'
             InputProps={{
               endAdornment: (
@@ -298,6 +323,12 @@ const LeftSidebar = () => {
                   <SVGAdd />
                 </InputAdornment>
               )
+            }}
+            onKeyPress={e => {
+              if (e.key === 'Enter') {
+                handleCustomSectionAdd((e.target as HTMLInputElement).value)
+                ;(e.target as HTMLInputElement).value = ''
+              }
             }}
             sx={{
               bgcolor: '#F3F5F8',

@@ -1,6 +1,7 @@
-import { GoogleDriveStorage, Resume } from '@cooperation/vc-storage'
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { getCookie } from '../../tools/cookie'
+import { getLocalStorage } from '../../tools/cookie'
+import StorageService from '../../storage-singlton'
 
 interface ResumeData {
   id: string
@@ -40,41 +41,65 @@ const initialState: VCState = {
 
 // Async thunk to fetch VCs
 export const fetchVCs = createAsyncThunk('vc/fetchVCs', async () => {
-  const accessToken = getCookie('auth_token')
+  const accessToken = getLocalStorage('auth')
   if (!accessToken) {
     console.error('Access token not found')
     throw new Error('Access token not found')
   }
 
-  const storage = new GoogleDriveStorage(accessToken as string)
-  const claimsData: any[] = await storage.getAllFilesByType('VCs')
-  const vcs = claimsData.map((file: any[]) =>
-    file.filter((f: { name: string }) => f.name !== 'RELATIONS')
-  )
-  // Filter out files where `name` is "RELATIONS"
-  return claimsData.map((file: any[]) =>
-    file.filter((f: { name: string }) => f.name !== 'RELATIONS')
-  )
+  const storageService = StorageService.getInstance()
+  storageService.initialize(accessToken)
+
+  const claimsData: any[] = await storageService.handleApiCall(async () => {
+    const storage = storageService.getStorage()
+    return await storage.getAllFilesByType('VCs')
+  })
+
+
+
+  const vcs = claimsData
+    .filter(item => item.data && item.data.fileName)
+    .map(item => {
+      const parsedBody = JSON.parse(item.data.body)
+      // Store the Google Drive file ID separately from the credential ID
+      return {
+        id: item.id, // Use the Google Drive file ID as the main ID
+        ...parsedBody,
+        credentialId: item.id, // Also store it as credentialId for the viewer
+        urnId: parsedBody.id, // Keep the URN ID separately if needed
+        originalItem: item // Keep original item if needed
+      }
+    })
+
+  // If you want to log the VCs as JSON
+
+
+  return vcs
 })
 
 // Async thunk to fetch resumes
 export const fetchUserResumes = createAsyncThunk('vc/fetchUserResumes', async () => {
-  const accessToken = getCookie('auth_token')
+  const accessToken = getLocalStorage('auth')
   if (!accessToken) {
     console.error('Access token not found')
     throw new Error('Access token not found')
   }
 
-  const storage = new GoogleDriveStorage(accessToken)
-  const resumeManager = new Resume(storage)
+  const storageService = StorageService.getInstance()
+  storageService.initialize(accessToken)
 
-  const resumeVCs = await resumeManager.getSignedResumes()
-  const resumeSessions = await resumeManager.getNonSignedResumes()
+  const result = await storageService.handleApiCall(async () => {
+    const resumeManager = storageService.getResumeManager()
+    const resumeVCs = await resumeManager.getSignedResumes()
+    const resumeSessions = await resumeManager.getNonSignedResumes()
 
-  return {
-    signed: resumeVCs,
-    unsigned: resumeSessions
-  }
+    return {
+      signed: resumeVCs,
+      unsigned: resumeSessions
+    }
+  })
+
+  return result
 })
 
 const vcSlice = createSlice({

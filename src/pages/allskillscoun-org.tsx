@@ -14,6 +14,7 @@ import {
 
 const LandingPage = () => {
   const theme = useTheme()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [showScrollTop, setShowScrollTop] = useState(false)
 

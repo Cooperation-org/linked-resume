@@ -18,8 +18,6 @@ import TextEditor from '../TextEditor/Texteditor'
 
 interface SectionContentProps {
   sectionId: keyof Resume
-  highlightedText: string
-  tooltipPosition: { top: number; left: number } | null | undefined
 }
 
 // Define types for our items
@@ -29,11 +27,7 @@ type CredentialItem = {
   verified: boolean
 }
 
-const SectionContent: React.FC<SectionContentProps> = ({
-  sectionId,
-  highlightedText,
-  tooltipPosition
-}) => {
+const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
   const dispatch = useDispatch()
   const { vcs: claims } = useSelector((state: any) => state.vcReducer)
   const resume = useSelector((state: any) => state.resume.resume)

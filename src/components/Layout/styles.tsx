@@ -10,18 +10,33 @@ export const SidebarContainer = styled(Box)(({ theme }) => ({
   left: 0,
   top: 0,
   transition: 'width 0.3s ease',
+  [theme.breakpoints.down('md')]: {
+    width: 28,
+    padding: theme.spacing(2, 2)
+  },
   '&.expanded': {
-    width: 250
+    width: 250,
+    [theme.breakpoints.down('md')]: {
+      width: 200
+    }
   }
 }))
 
 export const MainContent = styled(Box)(({ theme }) => ({
-  marginLeft: 90,
+  marginLeft: 75,
   minHeight: '100vh',
   width: 'calc(100% - 90px)',
   transition: 'width 0.3s ease',
+  [theme.breakpoints.down('md')]: {
+    width: 'calc(100% - 90px)',
+    alignSelf: 'center'
+  },
   '&.sidebar-expanded': {
-    marginLeft: 300
+    marginLeft: 300,
+    [theme.breakpoints.down('md')]: {
+      marginLeft: 240,
+      width: 'calc(100% - 240px)'
+    }
   }
 }))
 

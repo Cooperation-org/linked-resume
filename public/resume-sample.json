@@ -30,7 +30,6 @@
         "endDate": "present",
         "location": "San Francisco, CA",
         "description": "Leading full-stack development team for cloud-based enterprise solutions",
-        "achievements": ["Reduced system latency by 40%", "Led team of 5 developers", "Optimized cloud infrastructure for scalability"],
         "verificationStatus": "verified",
         "verifiedCredentials": [
           {
@@ -53,7 +52,6 @@
         "startDate": "2018-03",
         "endDate": "2020-05",
         "description": "Full-stack development for SaaS platform",
-        "achievements": ["Developed core product features", "Implemented OAuth authentication", "Optimized database queries for faster access"],
         "verificationStatus": "unverified"
       },
       {
@@ -63,7 +61,6 @@
         "startDate": "2016-06",
         "endDate": "2018-02",
         "description": "Worked on front-end and back-end development of internal tools",
-        "achievements": ["Improved UI responsiveness", "Integrated third-party APIs", "Participated in Agile sprints"],
         "verificationStatus": "verified",
         "verifiedCredentials": [
           {

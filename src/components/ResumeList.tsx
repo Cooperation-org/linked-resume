@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import { getCookie } from '../tools/cookie'
+import { getLocalStorage } from '../tools/cookie'
 import { GoogleDriveStorage, Resume } from '@cooperation/vc-storage'
 
 import {
@@ -28,7 +28,7 @@ const PrevResumesList: React.FC<PrevResumesListProps> = ({ open, onClose }) => {
   >([])
   const [loading, setLoading] = useState(false)
   const dispatch = useDispatch() // Access the Redux dispatch function
-  const accessToken = getCookie('auth_token')
+  const accessToken = getLocalStorage('auth')
 
   const getSessions = useCallback(async () => {
     try {
@@ -42,7 +42,7 @@ const PrevResumesList: React.FC<PrevResumesListProps> = ({ open, onClose }) => {
       const resumeManager = new Resume(storage)
       const nonSignedResumes = await resumeManager.getNonSignedResumes()
 
-      console.log('🚀 ~ getSessions ~ nonSignedResumes:', nonSignedResumes)
+      
 
       // Map resumes to the required format for display
       const sessions = nonSignedResumes.map((resume: any) => ({
@@ -56,7 +56,7 @@ const PrevResumesList: React.FC<PrevResumesListProps> = ({ open, onClose }) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [accessToken])
 
   useEffect(() => {
     if (open) {
@@ -65,7 +65,7 @@ const PrevResumesList: React.FC<PrevResumesListProps> = ({ open, onClose }) => {
   }, [open, getSessions])
 
   const handleSelectResume = (resume: { id: string; name: string; content: any }) => {
-    console.log('Selected resume:', resume)
+    
     dispatch(setSelectedResume(resume.content)) // Dispatch the selected resume content
     onClose() // Close the dialog
   }

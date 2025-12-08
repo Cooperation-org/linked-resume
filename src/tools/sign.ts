@@ -7,6 +7,7 @@ const signResume = async ({
   resume: Resume
   accessToken: string
 }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let keyPair
 
   // const storage = new GoogleDriveStorage(accessToken)

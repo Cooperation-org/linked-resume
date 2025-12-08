@@ -20,7 +20,6 @@ interface VerifiableItem {
   id: string
   verificationStatus: 'unverified' | 'pending' | 'verified'
   verifiedCredentials?: VerificationCredential[]
-
   isVisible?: boolean
 }
 
@@ -40,22 +39,34 @@ interface Contact {
     linkedin?: string
     github?: string
     portfolio?: string
-    twitter?: string
+    instagram?: string
     [key: string]: string | undefined
   }
 }
 
 interface WorkExperience extends VerifiableItem {
+  title: string
+  duration: string
+  currentlyEmployed: boolean
   company: string
-  position: string
-  startDate: string
   endDate?: string
   location?: string
   description: string
-  achievements: string[]
+  position?: string
+  startDate?: string
+  acheivements?: string[]
+  id?: string
+  verificationStatus?: 'unverified' | 'verified'
+  credentialLink?: string
+  evidence?: string[]
+  attachedFiles?: string[]
+  [key: string]: any
 }
 
 interface Education extends VerifiableItem {
+  type: ReactNode
+  programName: ReactNode
+  awardEarned: boolean
   institution: string
   degree: string
   field: string
@@ -66,13 +77,30 @@ interface Education extends VerifiableItem {
   honors?: string[]
   thesis?: string
   relevantCourses?: string[]
+  duration: string
+  currentlyEnrolled: boolean
+  inProgress: boolean
+  description: string
+  id: string
+  verificationStatus: string
+  credentialLink: string
+  evidence?: string[]
+  attachedFiles?: string[]
+  [key: string]: any
 }
 
 interface Skill extends VerifiableItem {
-  name: string
-  category?: string
-  level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'
-  yearsOfExperience?: number
+  // name: string
+  // category?: string
+  // level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'
+  // yearsOfExperience?: number
+  skills: string
+  id: string
+  verificationStatus: string
+  credentialLink: string
+  evidence?: string[]
+  attachedFiles?: string[]
+  [key: string]: any
 }
 
 interface Conference extends VerifiableItem {
@@ -83,6 +111,17 @@ interface Conference extends VerifiableItem {
   description?: string
   presentationTitle?: string
   url?: string
+  evidence?: string[]
+}
+
+interface Project extends VerifiableItem {
+  name: string
+  description: string
+  url?: string
+  technologies: string[]
+  credentialLink?: string
+  evidence?: string[]
+  attachedFiles?: string[]
 }
 
 interface Award extends VerifiableItem {
@@ -91,6 +130,7 @@ interface Award extends VerifiableItem {
   date: string
   description?: string
   recognition?: string
+  evidence?: string[]
 }
 
 interface Publication extends VerifiableItem {
@@ -104,6 +144,7 @@ interface Publication extends VerifiableItem {
   citation?: string
   abstract?: string
   impact?: string
+  evidence?: string[]
 }
 
 interface Certification extends VerifiableItem {
@@ -112,18 +153,30 @@ interface Certification extends VerifiableItem {
   issueDate: string
   expiryDate?: string
   credentialId?: string
-  credentialURL?: string
+  credentialLink?: string
+  noExpiration: boolean
   score?: string
+  evidence?: string[]
+  attachedFiles?: string[]
 }
 
 interface ProfessionalAffiliation extends VerifiableItem {
+  name: string
   organization: string
   role?: string
   startDate: string
   endDate?: string
+  duration?: string
   membershipId?: string
   description?: string
   benefits?: string[]
+  activeAffiliation: boolean
+  id: string
+  verificationStatus: string
+  credentialLink: string
+  evidence?: string[]
+  attachedFiles?: string[]
+  [key: string]: any
 }
 
 interface VolunteerWork extends VerifiableItem {
@@ -133,8 +186,12 @@ interface VolunteerWork extends VerifiableItem {
   endDate?: string
   location?: string
   description?: string
-  achievements?: string[]
+  currentlyVolunteering: boolean
+  duration: string
+  credentialLink?: string
   cause?: string
+  evidence?: string[]
+  attachedFiles?: string[]
 }
 
 interface Language extends VerifiableItem {
@@ -144,6 +201,7 @@ interface Language extends VerifiableItem {
   writingLevel?: string
   speakingLevel?: string
   readingLevel?: string
+  evidence?: string[]
 }
 
 // Main Resume Interface
@@ -154,7 +212,6 @@ interface Resume {
   version?: number
   contact: Contact
   summary: string
-
   experience: {
     items: WorkExperience[]
   }
@@ -164,23 +221,26 @@ interface Resume {
   skills: {
     items: Skill[]
   }
-  awards: {
+  projects: {
+    items: Project[]
+  }
+  awards?: {
     items: Award[]
   }
-  publications: {
+  publications?: {
     items: Publication[]
   }
-  certifications: {
+  certifications?: {
     items: Certification[]
   }
-  professionalAffiliations: {
+  professionalAffiliations?: {
     items: ProfessionalAffiliation[]
   }
-  volunteerWork: {
+  volunteerWork?: {
     items: VolunteerWork[]
   }
-  hobbiesAndInterests: string[]
-  languages: {
+  hobbiesAndInterests?: string[]
+  languages?: {
     items: Language[]
   }
   testimonials: {
@@ -201,4 +261,8 @@ interface ResumeData {
     }
   }
   type: 'signed' | 'unsigned'
+}
+
+interface ResumePreviewProps {
+  data: Resume
 }

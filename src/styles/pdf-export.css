@@ -1,0 +1,59 @@
+/* PDF Export Styles */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .resume-page {
+    margin: 0 !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  .resume-page:last-child {
+    page-break-after: auto;
+  }
+
+  /* Avoid breaking key blocks */
+  .rs-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Ensure headings are not orphaned */
+  .rs-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+}
+
+/* Ensure consistent rendering for PDF generation */
+.resume-page {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix for html2pdf rendering */
+#resume-preview {
+  font-family: Arial, sans-serif !important;
+}
+
+#resume-preview * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure headers don't overlap */
+#resume-preview .MuiTypography-root {
+  orphans: 3;
+  widows: 3;
+}

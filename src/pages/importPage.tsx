@@ -1,7 +1,6 @@
 import { Box, Button, Typography } from '@mui/material'
 import { styled } from '@mui/system'
-import { useAuth0 } from '@auth0/auth0-react'
-import { SVGStartFromScratchicon } from '../assets/svgs'
+import { SVGStartFromScratchicon, SVGUpload } from '../assets/svgs'
 
 const InnerContainer = styled(Box)(() => ({
   backgroundColor: '#FFFFFF',
@@ -33,6 +32,7 @@ const StyledButton = styled(Button)({
   textDecorationLine: 'underline',
   marginTop: '30px',
   textTransform: 'none',
+  pt: 2,
   '&:hover': {
     backgroundColor: 'transparent',
     color: '#1d4ed8'
@@ -40,16 +40,11 @@ const StyledButton = styled(Button)({
 })
 
 export default function ImportPage(props: any) {
-  const { user, isAuthenticated } = useAuth0()
-  console.log(':  LoginButton  user', user)
-
-  const { loginWithRedirect, logout } = useAuth0()
-  const handlesign = () => {
-    if (!isAuthenticated) {
-      loginWithRedirect({})
-    } else {
-      logout()
-    }
+  const handleFromScratch = () => {
+    window.location.href = '/resume/new'
+  }
+  const handleUpload = () => {
+    window.location.href = '/resume/upload'
   }
   return (
     <Box
@@ -67,10 +62,13 @@ export default function ImportPage(props: any) {
           sx={{
             color: '#07142B',
             textAlign: 'center',
-            mb: 8
+            mb: 8,
+            fontFamily: 'Poppins',
+            fontSize: { xs: '28px', md: '38px' },
+            fontWeight: 600
           }}
         >
-          Where do you want to import from?
+          How do you want to create your resume?
         </Typography>
 
         <Box
@@ -83,7 +81,10 @@ export default function ImportPage(props: any) {
             mb: { xs: '30px', md: 0 }
           }}
         >
-          <Section onClick={handlesign} sx={{ width: { xs: '250px', md: '400px' } }}>
+          <Section
+            onClick={handleFromScratch}
+            sx={{ width: { xs: '250px', md: '400px' } }}
+          >
             <Typography variant='h6' sx={{ color: '#07142B', fontWeight: 'bold' }}>
               Start from scratch
             </Typography>
@@ -92,19 +93,17 @@ export default function ImportPage(props: any) {
               Build a resume from a blank template
             </Typography>
           </Section>
-          <Section sx={{ width: { xs: '250px', md: '400px' } }}>
-            <Typography variant='h6' sx={{ color: '#07142B', fontWeight: 'bold' }}>
+          <Section onClick={handleUpload} sx={{ width: { xs: '250px', md: '400px' } }}>
+            <Typography
+              variant='h6'
+              sx={{
+                color: '#07142B',
+                fontWeight: 'bold'
+              }}
+            >
               Upload Resume
             </Typography>
-            <Box
-              component='img'
-              src='https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3931be67-58fb-4780-bc18-f60c628f1a4a'
-              sx={{
-                height: 44,
-                marginX: 'auto',
-                objectFit: 'fill'
-              }}
-            />
+            <SVGUpload />
             <Box
               sx={{
                 display: 'flex',
@@ -114,53 +113,18 @@ export default function ImportPage(props: any) {
             >
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Typography variant='body2' sx={{ color: '#1F2937' }}>
-                  Supported file types
+                  Import from verifiable credential URL
                 </Typography>
               </Box>
-              <Typography
-                variant='caption'
-                sx={{ color: '#9CA3AF', textAlign: 'center', marginX: 12 }}
-              >
-                (doc, docx, pdf, rtf, json, txt)
-              </Typography>
             </Box>
           </Section>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <StyledButton>Go to My Resumes </StyledButton>
+          <StyledButton onClick={() => (window.location.href = '/myresumes')}>
+            Go to My Resumes{' '}
+          </StyledButton>{' '}
         </Box>
       </InnerContainer>
-      <Box
-        sx={{
-          width: '100%',
-          bgcolor: '#FFF',
-          height: '80px',
-          boxShadow: ' 4px -4px 10px 2px rgba(20, 86, 255, 0.25)',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center'
-        }}
-      >
-        <Button
-          variant='contained'
-          sx={{
-            backgroundColor: '#B5B5B5',
-            color: '#FFFFFF',
-            textTransform: 'none',
-            px: 4,
-            py: 1.5,
-            mr: 6,
-            borderRadius: '100px',
-            border: '3px solid  #B5B5B5',
-            '&:hover': {
-              backgroundColor: '#1E40AF',
-              border: '3px solid  #1E40AF'
-            }
-          }}
-        >
-          Continue
-        </Button>
-      </Box>
     </Box>
   )
 }

@@ -4,7 +4,7 @@ export const initialState: ResumeState = {
   resume: {
     id: '', // Set during resume creation or loading
     lastUpdated: new Date().toISOString(),
-    name: '',
+    name: 'Untitled Resume',
     version: 1,
     contact: {
       fullName: '',
@@ -21,7 +21,7 @@ export const initialState: ResumeState = {
         linkedin: '',
         github: '',
         portfolio: '',
-        twitter: ''
+        instagram: ''
       }
     },
 
@@ -56,6 +56,9 @@ export const initialState: ResumeState = {
       items: []
     },
     testimonials: {
+      items: []
+    },
+    projects: {
       items: []
     }
   },

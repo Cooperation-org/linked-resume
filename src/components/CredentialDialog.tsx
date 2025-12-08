@@ -28,7 +28,6 @@ const CredentialDialog: React.FC<CredentialDialogProps> = ({
   sectionId,
   onCredentialsSelected
 }) => {
-  console.log(':  claims', claims)
   const dispatch = useDispatch()
   const selectedCredentials = useSelector(
     (state: any) => state.resume.selectedCredentials

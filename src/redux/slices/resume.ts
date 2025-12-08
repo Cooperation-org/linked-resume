@@ -115,6 +115,18 @@ const resumeSlice = createSlice({
     setSelectedResume: (state, action) => {
       state.resume = action.payload // Set the selected resume as the current resume
       state.isDirty = false // Reset the dirty state
+    },
+    resetToInitialState: () => {
+      // Reset the entire state to initial state with a fresh timestamp
+      return {
+        ...initialState,
+        resume: initialState.resume
+          ? {
+              ...initialState.resume,
+              lastUpdated: new Date().toISOString()
+            }
+          : null
+      }
     }
   }
 })
@@ -132,7 +144,8 @@ export const {
   removePendingVerification,
   resetDirtyState,
   setVCs,
-  setSelectedResume // Exported here
+  setSelectedResume, // Exported here
+  resetToInitialState
 } = resumeSlice.actions
 
 export default resumeSlice.reducer
