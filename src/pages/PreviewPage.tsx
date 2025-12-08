@@ -9,7 +9,9 @@ import {
   Divider,
   Snackbar,
   Alert,
-  Skeleton
+  Skeleton,
+  Tabs,
+  Tab
 } from '@mui/material'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -17,15 +19,20 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import ZoomOutIcon from '@mui/icons-material/ZoomOut'
 import FitScreenIcon from '@mui/icons-material/FitScreen'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import DescriptionIcon from '@mui/icons-material/Description'
+import ScienceIcon from '@mui/icons-material/Science'
 import { GoogleDriveStorage } from '@cooperation/vc-storage'
 import { getLocalStorage } from '../tools/cookie'
 import ResumePreview from '../components/resumePreview'
+import LaTeXResumePreview from '../components/LaTeXResumePreview'
 import ResumePreviewTopbar from '../components/ResumePreviewTopbar'
 import html2pdf from 'html2pdf.js'
 import { useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setSelectedResume } from '../redux/slices/resume'
 import { AppDispatch, RootState } from '../redux/store'
+import resumeToLatex from '../tools/resumeToLatex'
+import { HtmlGenerator, parse } from 'latex.js'
 
 const PreviewPage = () => {
   const [isDraftSaving, setIsDraftSaving] = useState(false)
@@ -33,6 +40,8 @@ const PreviewPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(null)
+  const [previewMode, setPreviewMode] = useState<'html' | 'latex'>('html')
+  const [isLatexPdfGenerating, setIsLatexPdfGenerating] = useState(false)
   const [snackbar, setSnackbar] = useState<{
     open: boolean
     message: string
@@ -52,6 +61,10 @@ const PreviewPage = () => {
   const [resumeData, setResumeData] = useState<any>(reduxResume)
   const [isLoading, setIsLoading] = useState(!reduxResume && !!resumeId)
   const hasLoadedFromDrive = useRef(false)
+  const latexSource = useMemo(
+    () => (resumeData ? resumeToLatex(resumeData) : ''),
+    [resumeData]
+  )
 
   // Update local state when Redux state changes (only if we haven't loaded from Drive)
   useEffect(() => {
@@ -103,20 +116,22 @@ const PreviewPage = () => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault()
         window.print()
-      } else if (e.key === '+' || e.key === '=') {
-        e.preventDefault()
-        setZoom(z => Math.min(1.5, parseFloat((z + 0.1).toFixed(2))))
-      } else if (e.key === '-') {
-        e.preventDefault()
-        setZoom(z => Math.max(0.7, parseFloat((z - 0.1).toFixed(2))))
-      } else if (e.key === '0') {
-        e.preventDefault()
-        setZoom(1)
+      } else if (previewMode === 'html') {
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault()
+          setZoom(z => Math.min(1.5, parseFloat((z + 0.1).toFixed(2))))
+        } else if (e.key === '-') {
+          e.preventDefault()
+          setZoom(z => Math.max(0.7, parseFloat((z - 0.1).toFixed(2))))
+        } else if (e.key === '0') {
+          e.preventDefault()
+          setZoom(1)
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [previewMode])
 
   const exportResumeToPDF = async () => {
     if (!resumeData) return
@@ -150,6 +165,65 @@ const PreviewPage = () => {
     }
   }
 
+  const handleDownloadLatexSource = () => {
+    if (!latexSource) return
+    const sourceBlob = new Blob([latexSource], { type: 'application/x-tex' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(sourceBlob)
+    const baseName = (resumeData?.contact?.fullName || 'Resume').replace(/\s+/g, '_')
+    link.download = `${baseName}.tex`
+    document.body.appendChild(link)
+    link.click()
+    URL.revokeObjectURL(link.href)
+    document.body.removeChild(link)
+  }
+
+  const exportLatexPdf = async () => {
+    if (!latexSource.trim()) return
+    setIsLatexPdfGenerating(true)
+    let tempContainer: HTMLDivElement | null = null
+    try {
+      const generator = parse(latexSource, {
+        generator: new HtmlGenerator({
+          hyphenate: false,
+          documentClass: 'article'
+        })
+      })
+      tempContainer = document.createElement('div')
+      tempContainer.style.position = 'fixed'
+      tempContainer.style.top = '-10000px'
+      tempContainer.style.left = '0'
+      tempContainer.style.width = '794px'
+      tempContainer.style.backgroundColor = '#fff'
+      tempContainer.className = 'latex-export-container'
+      tempContainer.innerHTML = generator.htmlDocument().body.innerHTML
+      document.body.appendChild(tempContainer)
+
+      const baseName = (resumeData?.contact?.fullName || 'Resume').replace(/\s+/g, '_')
+      const worker = html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `${baseName}_LaTeX.pdf`,
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      })
+
+      await worker.from(tempContainer).save()
+      setSnackbar({ open: true, message: 'LaTeX PDF downloaded', severity: 'success' })
+    } catch (err) {
+      console.error('Failed to export LaTeX PDF', err)
+      setSnackbar({
+        open: true,
+        message: 'Failed to export LaTeX PDF',
+        severity: 'error'
+      })
+    } finally {
+      if (tempContainer?.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer)
+      }
+      setIsLatexPdfGenerating(false)
+    }
+  }
+
   const handleCopyLink = async () => {
     try {
       const url = resumeId
@@ -178,6 +252,10 @@ const PreviewPage = () => {
     a.click()
     URL.revokeObjectURL(a.href)
     document.body.removeChild(a)
+  }
+
+  const handlePreviewModeChange = (_: React.SyntheticEvent, value: 'html' | 'latex') => {
+    setPreviewMode(value)
   }
 
   const fitToWidthZoom = useMemo(() => {
@@ -243,6 +321,25 @@ const PreviewPage = () => {
         resumeId={resumeId}
       />
 
+      <Box
+        sx={{
+          maxWidth: '900px',
+          mx: 'auto',
+          px: 2,
+          mt: 2
+        }}
+      >
+        <Tabs
+          value={previewMode}
+          onChange={handlePreviewModeChange}
+          aria-label='Preview mode tabs'
+          variant='fullWidth'
+        >
+          <Tab label='HTML Preview' value='html' />
+          <Tab label='LaTeX Preview' value='latex' />
+        </Tabs>
+      </Box>
+
       {/* Controls: Zoom and Export */}
       <Box
         sx={{
@@ -256,47 +353,52 @@ const PreviewPage = () => {
           '@media print': { display: 'none' }
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 1,
-            bgcolor: 'background.paper',
-            borderRadius: 1,
-            p: 0.5,
-            boxShadow: 2
-          }}
-        >
-          <Tooltip title='Zoom out (-)'>
-            <IconButton
-              aria-label='Zoom out'
-              onClick={() =>
-                setZoom(z => Math.max(0.7, parseFloat((z - 0.1).toFixed(2))))
-              }
-            >
-              <ZoomOutIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title='Reset zoom (0)'>
-            <IconButton aria-label='Reset zoom' onClick={() => setZoom(1)}>
-              <RestartAltIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title='Zoom in (+)'>
-            <IconButton
-              aria-label='Zoom in'
-              onClick={() =>
-                setZoom(z => Math.min(1.5, parseFloat((z + 0.1).toFixed(2))))
-              }
-            >
-              <ZoomInIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title='Fit'>
-            <IconButton aria-label='Fit to width' onClick={() => setZoom(fitToWidthZoom)}>
-              <FitScreenIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        {previewMode === 'html' && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 1,
+              bgcolor: 'background.paper',
+              borderRadius: 1,
+              p: 0.5,
+              boxShadow: 2
+            }}
+          >
+            <Tooltip title='Zoom out (-)'>
+              <IconButton
+                aria-label='Zoom out'
+                onClick={() =>
+                  setZoom(z => Math.max(0.7, parseFloat((z - 0.1).toFixed(2))))
+                }
+              >
+                <ZoomOutIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Reset zoom (0)'>
+              <IconButton aria-label='Reset zoom' onClick={() => setZoom(1)}>
+                <RestartAltIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Zoom in (+)'>
+              <IconButton
+                aria-label='Zoom in'
+                onClick={() =>
+                  setZoom(z => Math.min(1.5, parseFloat((z + 0.1).toFixed(2))))
+                }
+              >
+                <ZoomInIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Fit'>
+              <IconButton
+                aria-label='Fit to width'
+                onClick={() => setZoom(fitToWidthZoom)}
+              >
+                <FitScreenIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title='Export & Share'>
             <IconButton
@@ -308,51 +410,69 @@ const PreviewPage = () => {
             </IconButton>
           </Tooltip>
         </Box>
-        <Menu
-          anchorEl={exportAnchorEl}
-          open={Boolean(exportAnchorEl)}
-          onClose={() => setExportAnchorEl(null)}
-        >
-          <MenuItem
-            onClick={() => {
-              setExportAnchorEl(null)
-              exportResumeToPDF()
-            }}
-          >
-            <PictureAsPdfIcon sx={{ mr: 1 }} /> Download PDF
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setExportAnchorEl(null)
-              window.print()
-            }}
-          >
-            Print
-          </MenuItem>
-          <MenuItem
-            disabled={!resumeId}
-            onClick={() => {
-              setExportAnchorEl(null)
-              handleCopyLink()
-            }}
-          >
-            Copy Share Link
-          </MenuItem>
-          <Divider />
-          <MenuItem
-            onClick={() => {
-              setExportAnchorEl(null)
-              handleDownloadJson()
-            }}
-          >
-            Download JSON
-          </MenuItem>
-        </Menu>
       </Box>
+      <Menu
+        anchorEl={exportAnchorEl}
+        open={Boolean(exportAnchorEl)}
+        onClose={() => setExportAnchorEl(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setExportAnchorEl(null)
+            exportResumeToPDF()
+          }}
+        >
+          <PictureAsPdfIcon sx={{ mr: 1 }} /> Download PDF
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setExportAnchorEl(null)
+            window.print()
+          }}
+        >
+          Print
+        </MenuItem>
+        <MenuItem
+          disabled={!resumeId}
+          onClick={() => {
+            setExportAnchorEl(null)
+            handleCopyLink()
+          }}
+        >
+          Copy Share Link
+        </MenuItem>
+        <MenuItem
+          disabled={!latexSource}
+          onClick={() => {
+            setExportAnchorEl(null)
+            handleDownloadLatexSource()
+          }}
+        >
+          <DescriptionIcon sx={{ mr: 1 }} /> Download LaTeX (.tex)
+        </MenuItem>
+        <MenuItem
+          disabled={!latexSource || isLatexPdfGenerating}
+          onClick={() => {
+            setExportAnchorEl(null)
+            exportLatexPdf()
+          }}
+        >
+          <ScienceIcon sx={{ mr: 1 }} /> Compile LaTeX PDF
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            setExportAnchorEl(null)
+            handleDownloadJson()
+          }}
+        >
+          Download JSON
+        </MenuItem>
+      </Menu>
 
       <Box
         sx={{
-          display: 'flex',
+          display: previewMode === 'html' ? 'flex' : 'none',
           justifyContent: 'center',
           transition: 'transform 120ms ease',
           transform: `scale(${zoom})`,
@@ -360,6 +480,15 @@ const PreviewPage = () => {
         }}
       >
         <ResumePreview data={resumeData} />
+      </Box>
+
+      <Box
+        sx={{
+          display: previewMode === 'latex' ? 'block' : 'none',
+          px: 2
+        }}
+      >
+        <LaTeXResumePreview data={resumeData} />
       </Box>
 
       <Snackbar

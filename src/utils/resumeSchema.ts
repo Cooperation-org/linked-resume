@@ -184,4 +184,3 @@ Important Notes:
 - Extract as much information as possible, but don't invent information that's not in the PDF
 - Handle multiple languages - extract information regardless of the language used in the PDF
 `
-

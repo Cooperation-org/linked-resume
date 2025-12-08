@@ -287,8 +287,6 @@ const ResumePreviewDialog: React.FC<ResumePreviewDialogProps> = ({
           }
         }
 
-        
-
         setResumeData(transformedResumeData)
         setIsLoading(false)
       } catch (err) {

@@ -84,7 +84,8 @@ const VerifiedCredentialsList: React.FC<VerifiedCredentialsListProps> = ({
                   const originalCred = credential.vc || credential
                   const credToShow = {
                     ...originalCred,
-                    credentialId: credential.fileId || credential.id || originalCred.credentialId
+                    credentialId:
+                      credential.fileId || credential.id || originalCred.credentialId
                   }
                   setDialogCredObj(credToShow)
                   setOpenDialog(true)

@@ -1,4 +1,3 @@
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { getLocalStorage } from '../../tools/cookie'
 import StorageService from '../../storage-singlton'
@@ -55,8 +54,6 @@ export const fetchVCs = createAsyncThunk('vc/fetchVCs', async () => {
     return await storage.getAllFilesByType('VCs')
   })
 
-
-
   const vcs = claimsData
     .filter(item => item.data && item.data.fileName)
     .map(item => {
@@ -72,7 +69,6 @@ export const fetchVCs = createAsyncThunk('vc/fetchVCs', async () => {
     })
 
   // If you want to log the VCs as JSON
-
 
   return vcs
 })

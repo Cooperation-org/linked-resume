@@ -73,7 +73,7 @@ export default function ProfessionalSummary({
       </Typography>
 
       <TextEditor
-        key="professional-summary-editor"
+        key='professional-summary-editor'
         value={description}
         onChange={handleDescriptionChange}
         onAddCredential={onAddCredential}

@@ -57,8 +57,6 @@ export const storeFileTokens = async ({
         merge: true
       }
     )
-
-
   } catch (error) {
     console.error('Error storing file tokens:', error)
     throw error
@@ -84,7 +82,6 @@ export const getAccessToken = async (fileId: string) => {
 
     const isExpired = data.expiresAt <= Date.now()
     if (isExpired) {
-
       const refreshedToken = await refreshAccessToken({
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
@@ -156,8 +153,6 @@ export const updateFileAccessToken = async ({
       { accessToken, expiresAt: Date.now() + 3600 * 1000 },
       { merge: true }
     )
-
-
   } catch (error) {
     console.error('Error updating file access token:', error)
     throw error
@@ -221,7 +216,6 @@ export const getAccessTokenForFile = async ({
 
     // Check if the access token is still valid
     if (tokens.expiresAt > Date.now()) {
-
       return tokens.accessToken
     }
 
@@ -252,7 +246,6 @@ export const getAccessTokenForFile = async ({
       accessToken: newAccessToken
     })
 
-
     return newAccessToken
   } catch (error) {
     console.error('Error refreshing access token:', error)
@@ -270,7 +263,6 @@ export const deleteFileTokens = async ({
 }): Promise<void> => {
   try {
     await setDoc(doc(db, 'files', googleFileId), {})
-
   } catch (error) {
     console.error('Error deleting file tokens:', error)
     throw error
@@ -283,7 +275,6 @@ export const deleteFileTokens = async ({
 export const deleteUserTokens = async ({ userId }: { userId: string }): Promise<void> => {
   try {
     await setDoc(doc(db, 'users', userId, 'tokens', 'googleDrive'), {})
-
   } catch (error) {
     console.error('Error deleting user tokens:', error)
     throw error

@@ -57,7 +57,8 @@ const StyledButton = styled(Button)(() => ({
 }))
 
 // Function to generate unique ID for resume items
-const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+const generateId = (prefix: string) =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 // Function to transform Gemini response to resume format
 const transformGeminiResponseToResume = (geminiData: any) => {
@@ -397,8 +398,6 @@ export default function ResumeUploadPage() {
 
         vcData = await response.json()
       } catch (corsError) {
-        
-
         // Use the backend server as a proxy
         try {
           const backendUrl =
@@ -419,8 +418,6 @@ export default function ResumeUploadPage() {
 
           vcData = await proxyResponse.json()
         } catch (backendError) {
-          
-
           // Fallback to public CORS proxy
           try {
             const publicProxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
@@ -531,9 +528,11 @@ export default function ResumeUploadPage() {
     try {
       // Step 1: Extract text from PDF
       const pdfText = await extractTextFromPDF(selectedFile)
-      
+
       if (!pdfText || pdfText.trim().length === 0) {
-        throw new Error('No text could be extracted from the PDF. The PDF may be scanned or image-based.')
+        throw new Error(
+          'No text could be extracted from the PDF. The PDF may be scanned or image-based.'
+        )
       }
 
       setLoadingStep('Parsing resume with AI...')
@@ -570,15 +569,23 @@ export default function ResumeUploadPage() {
         if (err.message.includes('API key') || err.message.includes('Gemini API key')) {
           errorMessage =
             'Gemini API key is not configured. Please contact the administrator or check your environment variables.'
-        } else if (err.message.includes('password') || err.message.includes('encrypted')) {
+        } else if (
+          err.message.includes('password') ||
+          err.message.includes('encrypted')
+        ) {
           errorMessage =
             'This PDF is password-protected. Please provide an unencrypted PDF file.'
-        } else if (err.message.includes('Invalid PDF') || err.message.includes('No text')) {
+        } else if (
+          err.message.includes('Invalid PDF') ||
+          err.message.includes('No text')
+        ) {
           errorMessage = err.message
         } else if (err.message.includes('Rate limit')) {
-          errorMessage =
-            'API rate limit exceeded. Please wait a moment and try again.'
-        } else if (err.message.includes('Network error') || err.message.includes('fetch')) {
+          errorMessage = 'API rate limit exceeded. Please wait a moment and try again.'
+        } else if (
+          err.message.includes('Network error') ||
+          err.message.includes('fetch')
+        ) {
           errorMessage =
             'Network error: Unable to connect to the AI service. Please check your internet connection and try again.'
         } else if (err.message.includes('parse') || err.message.includes('JSON')) {
@@ -646,13 +653,22 @@ export default function ResumeUploadPage() {
             </Typography>
 
             <Box sx={{ mb: 3, p: 2, backgroundColor: '#F3F4F6', borderRadius: '8px' }}>
-              <Typography variant='body2' sx={{ color: '#374151', mb: 1, fontWeight: 600 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#374151', mb: 1, fontWeight: 600 }}
+              >
                 💡 Tips for success:
               </Typography>
-              <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}
+              >
                 • Make sure the URL is publicly accessible
               </Typography>
-              <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}
+              >
                 • The URL should return a verifiable credential in JSON format
               </Typography>
               <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px' }}>
@@ -750,24 +766,38 @@ export default function ResumeUploadPage() {
                 mb: 3
               }}
             >
-              Upload a PDF resume file and we'll automatically extract and parse your information
+              Upload a PDF resume file and we'll automatically extract and parse your
+              information
             </Typography>
 
             <Box sx={{ mb: 3, p: 2, backgroundColor: '#F3F4F6', borderRadius: '8px' }}>
-              <Typography variant='body2' sx={{ color: '#374151', mb: 1, fontWeight: 600 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#374151', mb: 1, fontWeight: 600 }}
+              >
                 💡 Tips for best results:
               </Typography>
-              <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}
+              >
                 • Use a text-based PDF (not scanned images)
               </Typography>
-              <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}
+              >
                 • PDFs in any language are supported
               </Typography>
-              <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}>
+              <Typography
+                variant='body2'
+                sx={{ color: '#6B7280', fontSize: '14px', mb: 1 }}
+              >
                 • Maximum file size: 20MB
               </Typography>
               <Typography variant='body2' sx={{ color: '#6B7280', fontSize: '14px' }}>
-                • The AI will extract contact info, experience, education, skills, and more
+                • The AI will extract contact info, experience, education, skills, and
+                more
               </Typography>
             </Box>
 

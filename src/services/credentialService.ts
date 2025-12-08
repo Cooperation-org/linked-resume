@@ -62,14 +62,10 @@ export const replaceCredentialLinksWithContent = async (
       const credentialId = item.credentialLink.split('/view/')[1]
 
       if (credentialId) {
-
-
         // Fetch the full credential content
         const fullCredential = await fetchCredentialFromDrive(credentialId, vcs)
 
         if (fullCredential) {
-
-
           // Replace the link with the full credential object
           return {
             ...item,

@@ -5,11 +5,11 @@ import { useParams, useLocation } from 'react-router-dom'
 const RawPreview = () => {
   const { fileId } = useParams<{ fileId: string }>()
   const location = useLocation()
-  
+
   // Check if credential was passed via navigation state
   const locationState = location.state as { credential?: any } | null
   const passedCredential = locationState?.credential
-  
+
   const [rawCredential, setRawCredential] = useState<any>(passedCredential || null)
   const [loading, setLoading] = useState<boolean>(!passedCredential) // Don't load if we have data
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +41,7 @@ const RawPreview = () => {
       if (passedCredential) {
         return
       }
-      
+
       const fullFileId = getFullFileId()
 
       if (!fullFileId) {
@@ -54,9 +54,8 @@ const RawPreview = () => {
         // Extract the actual file ID if it's a Google Drive link
         const actualFileId = extractGoogleDriveId(fullFileId)
 
-        
         const fileData = await getFileViaFirebase(actualFileId)
-        
+
         setRawCredential(fileData)
       } catch (err) {
         setError('Failed to extract raw credential')
@@ -72,7 +71,7 @@ const RawPreview = () => {
   // Function to download JSON file
   const downloadJson = () => {
     const credentialToDownload = rawCredential
-    
+
     if (!credentialToDownload) {
       setError('No credential data available to download')
       return

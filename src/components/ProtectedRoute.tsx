@@ -18,4 +18,3 @@ const ProtectedRoute = ({ redirectTo = '/login' }: ProtectedRouteProps) => {
 }
 
 export default ProtectedRoute
-

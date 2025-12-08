@@ -133,13 +133,12 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({
 
   const handleToggleCredential = (credential: CredentialItem) => {
     const credentialId = credential?.originalItem?.id || credential.id
-    
-    
+
     setSelectedCredentials(prev => {
       const newSelection = prev.includes(credentialId)
         ? prev.filter(id => id !== credentialId)
         : [...prev, credentialId]
-      
+
       return newSelection
     })
   }
@@ -153,14 +152,13 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({
       selectedCredentials,
       isArray: Array.isArray(selectedCredentials)
     })
-    
+
     if (Array.isArray(selectedCredentials)) {
       // Deduplicate by ID before passing to onSelect
       const deduped = Array.from(new Set(selectedCredentials))
-      
+
       onSelect(deduped)
     } else {
-      
       onSelect([])
     }
     onClose?.()
@@ -340,7 +338,6 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({
           </Button>
           <Button
             onClick={() => {
-              
               handleContinue()
             }}
             variant='contained'

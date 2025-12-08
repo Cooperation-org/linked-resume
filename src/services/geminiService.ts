@@ -3,7 +3,12 @@ import { RESUME_SCHEMA_DESCRIPTION } from '../utils/resumeSchema'
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1'
 // List of models to try in order of preference
 // gemini-2.0-flash is the latest and most capable
-const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro', 'gemini-1.5-pro']
+const GEMINI_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-pro',
+  'gemini-1.5-pro'
+]
 
 /**
  * Calls Gemini API to parse resume text and map it to the resume schema
@@ -35,7 +40,7 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
 
   // Try each model until one works
   let lastError: Error | null = null
-  
+
   for (const model of GEMINI_MODELS) {
     try {
       const response = await fetch(
@@ -72,7 +77,10 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
           errorData.error?.message || `HTTP error! status: ${response.status}`
 
         // If model not found, try next model
-        if (errorMessage.includes('not found') || errorMessage.includes('not supported')) {
+        if (
+          errorMessage.includes('not found') ||
+          errorMessage.includes('not supported')
+        ) {
           console.warn(`Model ${model} not available, trying next model...`)
           lastError = new Error(`Model ${model} is not available`)
           continue // Try next model
@@ -85,9 +93,7 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
           )
         }
         if (response.status === 429) {
-          throw new Error(
-            'Rate limit exceeded. Please wait a moment and try again.'
-          )
+          throw new Error('Rate limit exceeded. Please wait a moment and try again.')
         }
         if (response.status >= 500) {
           throw new Error(
@@ -121,7 +127,10 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
       // Parse the JSON response
       try {
         // Remove any markdown code blocks if present
-        const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+        const cleanedContent = content
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim()
         const parsedResume = JSON.parse(cleanedContent)
         return parsedResume
       } catch (parseError) {
@@ -136,7 +145,7 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
         lastError = error
         continue
       }
-      
+
       // Re-throw authentication and rate limit errors immediately
       if (error instanceof Error) {
         if (
@@ -166,6 +175,8 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
   }
 
   // If we've tried all models and none worked, throw the last error
-  throw lastError || new Error('All Gemini models failed. Please check your API key and try again.')
+  throw (
+    lastError ||
+    new Error('All Gemini models failed. Please check your API key and try again.')
+  )
 }
-

@@ -1,0 +1,76 @@
+.latexjs-preview {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #1f2933;
+}
+
+.latexjs-preview h1,
+.latexjs-preview h2,
+.latexjs-preview h3,
+.latexjs-preview h4,
+.latexjs-preview h5,
+.latexjs-preview h6 {
+  font-weight: 600;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.latexjs-preview h1 {
+  font-size: 1.6rem;
+}
+
+.latexjs-preview h2 {
+  font-size: 1.35rem;
+}
+
+.latexjs-preview h3 {
+  font-size: 1.15rem;
+}
+
+.latexjs-preview p {
+  margin: 0 0 0.9rem;
+}
+
+.latexjs-preview ul,
+.latexjs-preview ol {
+  padding-left: 1.4rem;
+  margin: 0 0 1rem;
+}
+
+.latexjs-preview li {
+  margin-bottom: 0.35rem;
+}
+
+.latexjs-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.latexjs-preview th,
+.latexjs-preview td {
+  border: 1px solid #cbd5f5;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.latexjs-preview blockquote {
+  border-left: 3px solid #7c3aed;
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  background: #f8f5ff;
+}
+
+.latexjs-preview .footnotes {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.latexjs-preview .footnotes p {
+  margin-bottom: 0.4rem;
+}
+
+.latexjs-preview a {
+  color: #2563eb;
+  text-decoration: underline;
+}

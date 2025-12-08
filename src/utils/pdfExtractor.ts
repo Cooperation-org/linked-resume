@@ -46,19 +46,24 @@ export async function extractTextFromPDF(file: File): Promise<string> {
     return fullText.trim()
   } catch (error) {
     console.error('Error extracting text from PDF:', error)
-    
+
     if (error instanceof Error) {
       // Handle specific error types
       if (error.message.includes('password') || error.message.includes('encrypted')) {
-        throw new Error('This PDF is password-protected. Please provide an unencrypted PDF.')
+        throw new Error(
+          'This PDF is password-protected. Please provide an unencrypted PDF.'
+        )
       }
       if (error.message.includes('Invalid PDF')) {
-        throw new Error('Invalid PDF file. Please ensure the file is a valid PDF document.')
+        throw new Error(
+          'Invalid PDF file. Please ensure the file is a valid PDF document.'
+        )
       }
       throw new Error(`Failed to extract text from PDF: ${error.message}`)
     }
-    
-    throw new Error('Failed to extract text from PDF. Please ensure the file is a valid PDF document.')
+
+    throw new Error(
+      'Failed to extract text from PDF. Please ensure the file is a valid PDF document.'
+    )
   }
 }
-

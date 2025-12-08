@@ -14,12 +14,12 @@ export function getCredentialName(vc: any): string {
     if (!vc || typeof vc !== 'object') {
       return 'Invalid Credential'
     }
-    
+
     const credentialSubject = vc.credentialSubject
     if (!credentialSubject || typeof credentialSubject !== 'object') {
       return 'Unknown Credential'
     }
-    
+
     // Check various credential types
     if (credentialSubject.employeeName) {
       return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
@@ -38,7 +38,7 @@ export function getCredentialName(vc: any): string {
         return credentialSubject.achievement[0].name
       }
     }
-    
+
     return 'Credential'
   } catch (error) {
     console.error('Error getting credential name:', error)
@@ -47,24 +47,26 @@ export function getCredentialName(vc: any): string {
 }
 
 // Parse stored credentialLink string to array of credentials
-export function parseStoredCredentials(credentialLink: string | undefined): SelectedCredential[] {
+export function parseStoredCredentials(
+  credentialLink: string | undefined
+): SelectedCredential[] {
   if (!credentialLink || credentialLink.trim() === '') return []
-  
+
   try {
     const parsed = JSON.parse(credentialLink)
     if (!Array.isArray(parsed)) return []
-    
+
     const credentials: SelectedCredential[] = []
-    
+
     for (const item of parsed) {
       if (typeof item !== 'string') continue
-      
+
       const commaIdx = item.indexOf(',')
       if (commaIdx === -1) continue
-      
+
       const fileId = item.substring(0, commaIdx)
       const vcJson = item.substring(commaIdx + 1)
-      
+
       try {
         const vc = JSON.parse(vcJson)
         const credential: SelectedCredential = {
@@ -80,7 +82,7 @@ export function parseStoredCredentials(credentialLink: string | undefined): Sele
         continue
       }
     }
-    
+
     return credentials
   } catch (e) {
     console.error('Error parsing credential link:', e)
@@ -94,7 +96,7 @@ export function credentialsToStorageFormat(credentials: SelectedCredential[]): s
     .map(cred => {
       const fileId = cred.fileId || cred.id
       if (!fileId || !cred.vc) return ''
-      
+
       try {
         return `${fileId},${JSON.stringify(cred.vc)}`
       } catch (e) {
@@ -103,7 +105,7 @@ export function credentialsToStorageFormat(credentials: SelectedCredential[]): s
       }
     })
     .filter(Boolean)
-  
+
   return JSON.stringify(credLinks)
 }
 
@@ -115,20 +117,23 @@ export function generateUniqueId(prefix: string = 'item'): string {
 }
 
 // Deduplicate credentials by ID
-export function deduplicateCredentials(credentials: SelectedCredential[]): SelectedCredential[] {
+export function deduplicateCredentials(
+  credentials: SelectedCredential[]
+): SelectedCredential[] {
   const seen = new Map<string, SelectedCredential>()
-  
+
   for (const cred of credentials) {
     if (!seen.has(cred.id)) {
       seen.set(cred.id, cred)
     }
   }
-  
+
   return Array.from(seen.values())
 }
 
 // Check if credential is verified
 export function isCredentialVerified(vc: any): boolean {
-  return vc?.credentialStatus === 'verified' || 
-         vc?.credentialStatus?.status === 'verified'
+  return (
+    vc?.credentialStatus === 'verified' || vc?.credentialStatus?.status === 'verified'
+  )
 }

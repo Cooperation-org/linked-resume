@@ -19,10 +19,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 
-const PAGE_SIZE = {
-  width: '210mm',
-  height: '297mm'
-}
+const PAGE_SIZE = { width: '210mm', height: '297mm' }
 const HEADER_HEIGHT_PX = 150
 const FOOTER_HEIGHT_PX = 60 // Footer height including padding (60px + 30px py)
 const CONTENT_PADDING_TOP = 20
@@ -97,9 +94,7 @@ const LinkWithFavicon: React.FC<{ url: string; platform?: string }> = ({
             lineHeight: '9px',
             fontWeight: 400,
             fontFamily: 'DM Sans',
-            '&:hover': {
-              opacity: 0.8
-            }
+            '&:hover': { opacity: 0.8 }
           }}
         >
           {cleanUrl}
@@ -169,9 +164,7 @@ const FirstPageHeader: React.FC<{
                   fontSize: '15px',
                   fontWeight: 400,
                   fontFamily: 'Arial',
-                  '&:hover': {
-                    textDecoration: 'underline'
-                  }
+                  '&:hover': { textDecoration: 'underline' }
                 }}
               >
                 {email}
@@ -189,9 +182,7 @@ const FirstPageHeader: React.FC<{
                   fontSize: '15px',
                   fontWeight: 400,
                   fontFamily: 'Arial',
-                  '&:hover': {
-                    textDecoration: 'underline'
-                  }
+                  '&:hover': { textDecoration: 'underline' }
                 }}
               >
                 {phone}
@@ -222,9 +213,7 @@ const FirstPageHeader: React.FC<{
                         fontSize: '15px',
                         fontWeight: 400,
                         fontFamily: 'Arial',
-                        '&:hover': {
-                          textDecoration: 'underline'
-                        }
+                        '&:hover': { textDecoration: 'underline' }
                       }}
                     >
                       {url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
@@ -553,29 +542,6 @@ function parseCredentialLink(
   return null
 }
 
-// Helper function to extract or construct credential URL from link string
-function getCredentialUrl(link: string, fileId: string): string {
-  try {
-    // Check if link contains a URL (external credentials with format 'url,{json}')
-    if (link.includes(',{')) {
-      const commaIdx = link.indexOf(',')
-      const urlPart = link.slice(0, commaIdx).trim()
-      // If urlPart looks like a URL, use it
-      if (urlPart.startsWith('http://') || urlPart.startsWith('https://')) {
-        return urlPart
-      }
-    }
-
-    // For native credentials or other formats, construct URL using fileId
-    // Use the same base URL as in MinimalCredentialViewer
-    return `https://linked-creds-author-businees-enhancement.vercel.app/view/${fileId}`
-  } catch (e) {
-    console.error('Error extracting credential URL:', e)
-    // Fallback: construct URL with fileId
-    return `https://linked-creds-author-businees-enhancement.vercel.app/view/${fileId}`
-  }
-}
-
 // Single function to handle ALL credential rendering for any section
 function renderSectionCredentials(
   credentialLink: string | string[] | undefined,
@@ -586,19 +552,14 @@ function renderSectionCredentials(
   // Get credential links as array
   const credLinks = getCredentialLinks(credentialLink)
 
-  // Parse and deduplicate credentials, keeping track of original link for URL extraction
-  const dedupedCreds: {
-    credObj: any
-    credId: string
-    fileId: string
-    originalLink: string
-  }[] = []
+  // Parse and deduplicate credentials
+  const dedupedCreds: { credObj: any; credId: string; fileId: string }[] = []
   const seen = new Set<string>()
 
   credLinks.forEach(link => {
     const parsed = parseCredentialLink(link)
     if (parsed && !seen.has(parsed.fileId)) {
-      dedupedCreds.push({ ...parsed, originalLink: link })
+      dedupedCreds.push(parsed)
       seen.add(parsed.fileId)
     }
   })
@@ -612,61 +573,47 @@ function renderSectionCredentials(
       className='rs-avoid-break'
       sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}
     >
-      {dedupedCreds.map(({ credObj, credId, fileId, originalLink }, idx) => {
-        const credentialUrl = getCredentialUrl(originalLink, fileId)
-
-        return (
-          <Link
-            key={fileId || idx}
-            href={credentialUrl}
-            target='_blank'
-            rel='noopener noreferrer'
-            onClick={e => {
-              // Allow direct navigation on middle-click, Ctrl+click, or Cmd+click
-              // Regular clicks open the dialog instead
-              if (e.button === 1 || e.ctrlKey || e.metaKey) {
-                // Allow default navigation for middle-click or modifier keys
-                return
-              }
-              // Prevent default navigation in web preview to open dialog instead
-              e.preventDefault()
-              openCredentialDialog(
-                credObj,
-                fileId,
-                setDialogCredObj,
-                setDialogImageUrl,
-                setOpenCredDialog
-              )
-            }}
-            sx={{
-              color: '#2563EB',
-              textDecoration: 'underline',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              mr: 2,
-              cursor: 'pointer',
-              gap: '6px',
-              '&:hover': { opacity: 0.85 },
-              '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: '2px' }
-            }}
-          >
-            <WorkspacePremiumIcon
-              sx={{ fontSize: 16, color: '#2563EB', flex: '0 0 auto' }}
-            />
-            {credObj &&
-              (credObj.credentialStatus === 'verified' ||
-                credObj.credentialStatus?.status === 'verified') && (
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                  <BlueVerifiedBadge />
-                </span>
-              )}
-            {credObj && getCredentialName(credObj) !== 'Credential'
-              ? getCredentialName(credObj)
-              : `External Credential ${fileId.substring(0, 8)}...`}
-          </Link>
-        )
-      })}
+      {dedupedCreds.map(({ credObj, credId, fileId }, idx) => (
+        <Typography
+          key={fileId || idx}
+          variant='body2'
+          sx={{
+            color: '#2563EB',
+            textDecoration: 'underline',
+            fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            mr: 2,
+            cursor: 'pointer',
+            gap: '6px',
+            '&:hover': { opacity: 0.85 },
+            '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: '2px' }
+          }}
+          onClick={() => {
+            openCredentialDialog(
+              credObj,
+              fileId,
+              setDialogCredObj,
+              setDialogImageUrl,
+              setOpenCredDialog
+            )
+          }}
+        >
+          <WorkspacePremiumIcon
+            sx={{ fontSize: 16, color: '#2563EB', flex: '0 0 auto' }}
+          />
+          {credObj &&
+            (credObj.credentialStatus === 'verified' ||
+              credObj.credentialStatus?.status === 'verified') && (
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <BlueVerifiedBadge />
+              </span>
+            )}
+          {credObj && getCredentialName(credObj) !== 'Credential'
+            ? getCredentialName(credObj)
+            : `External Credential ${fileId.substring(0, 8)}...`}
+        </Typography>
+      ))}
     </Box>
   )
 }
@@ -755,9 +702,7 @@ function renderAttachedFiles(attachedFiles: string[] | undefined) {
               alignItems: 'center',
               gap: '4px',
               cursor: 'pointer',
-              '&:hover': {
-                opacity: 0.8
-              }
+              '&:hover': { opacity: 0.8 }
             }}
             onClick={() => window.open(fileUrl, '_blank')}
           >
@@ -1013,12 +958,7 @@ const CertificationItem: React.FC<{
         {item.issuer && (
           <Typography
             variant='body2'
-            sx={{
-              color: '#000',
-              fontFamily: 'Arial',
-              fontSize: '16px',
-              fontWeight: 400
-            }}
+            sx={{ color: '#000', fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
           >
             Issued by {item.issuer}
           </Typography>
@@ -1026,12 +966,7 @@ const CertificationItem: React.FC<{
         {displayDate && (
           <Typography
             variant='body2'
-            sx={{
-              color: '#000',
-              fontFamily: 'Arial',
-              fontSize: '16px',
-              fontWeight: 400
-            }}
+            sx={{ color: '#000', fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
           >
             {displayDate}
           </Typography>
@@ -1085,11 +1020,7 @@ const ProjectItem: React.FC<{
           {dateText && (
             <Typography
               variant='body2'
-              sx={{
-                fontFamily: 'Arial',
-                fontSize: '16px',
-                fontWeight: 400
-              }}
+              sx={{ fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
             >
               {dateText}
             </Typography>
@@ -1250,36 +1181,22 @@ const VolunteerWorkItem: React.FC<{
   )
 }
 
-// Single Skill Item Component
-const SkillItem: React.FC<{
-  item: Skill
-}> = ({ item }) => {
-  return (
-    <Box
-      key={item.id}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: 0.5,
-        width: 'calc(100% - 8px)',
-        mb: 1
-      }}
-    >
-      <Typography
-        sx={{
-          fontWeight: 400,
-          fontSize: '16px',
-          fontFamily: 'Arial',
-          ml: 0
-        }}
-      >
-        <HTMLWithVerifiedLinks htmlContent={item.skills || ''} />
-      </Typography>
-      {/* Portfolio (files) listed below the skill/cred */}
-      {renderPortfolio(getPortfolioFromCredentialLink(item.credentialLink))}
-    </Box>
-  )
+// Helper function to extract plain text from HTML and split into individual skills
+const extractSkillsFromHTML = (htmlContent: string): string[] => {
+  if (!htmlContent) return []
+
+  // Create a temporary DOM element to extract text content
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = htmlContent
+
+  // Get plain text
+  const plainText = tempDiv.textContent || tempDiv.innerText || ''
+
+  // Split by commas, bullets, and newlines (similar to LaTeX parsing)
+  return plainText
+    .split(/[,•\n]+/)
+    .map(skill => skill.trim())
+    .filter(Boolean)
 }
 
 // Single Language Item Component
@@ -1348,6 +1265,9 @@ const SkillsSection: React.FC<{
 }> = ({ items, setDialogCredObj, setDialogImageUrl, setOpenCredDialog }) => {
   if (!items?.length) return null
 
+  // Extract all skills from all items and flatten into a single array
+  const allSkills = items.flatMap(item => extractSkillsFromHTML(item.skills || ''))
+
   // Collect all credential links from all skill items
   const allCredLinks = items.flatMap(item => {
     const links = getCredentialLinks(item.credentialLink)
@@ -1359,11 +1279,24 @@ const SkillsSection: React.FC<{
   return (
     <Box sx={{ mb: '15px' }}>
       <SectionTitle>Skills</SectionTitle>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {items.map(item => (
-          <SkillItem key={item.id} item={item} />
+      <Typography
+        sx={{
+          fontWeight: 400,
+          fontSize: '16px',
+          fontFamily: 'Arial',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '4px 8px',
+          alignItems: 'center'
+        }}
+      >
+        {allSkills.map((skill, index) => (
+          <React.Fragment key={index}>
+            <span>{skill}</span>
+            {index < allSkills.length - 1 && <span style={{ color: '#666' }}>•</span>}
+          </React.Fragment>
         ))}
-      </Box>
+      </Typography>
       {/* Render all credentials at the end of the section */}
       {renderSectionCredentials(
         combinedCredentialLink,
@@ -1734,10 +1667,7 @@ const ResumePreview: React.FC<{ data?: Resume; forcedId?: string }> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'visible',
-        '@media print': {
-          margin: 0,
-          padding: 0
-        }
+        '@media print': { margin: 0, padding: 0 }
       }}
     >
       {/* Dialog for credential or image viewing */}
@@ -1756,10 +1686,7 @@ const ResumePreview: React.FC<{ data?: Resume; forcedId?: string }> = ({
           }
         }}
         BackdropProps={{
-          sx: {
-            background: 'rgba(30, 41, 59, 0.25)',
-            backdropFilter: 'blur(2px)'
-          }
+          sx: { background: 'rgba(30, 41, 59, 0.25)', backdropFilter: 'blur(2px)' }
         }}
       >
         <DialogContent
@@ -1866,13 +1793,7 @@ const ResumePreview: React.FC<{ data?: Resume; forcedId?: string }> = ({
                 {pageContent}
               </Box>
               <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  width: '100%'
-                }}
+                sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%' }}
               >
                 <PageFooter
                   fullName={resume.contact?.fullName || 'Your Name'}

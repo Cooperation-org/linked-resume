@@ -8,7 +8,6 @@ import { getOrCreateAppInstanceDid } from '@cooperation/vc-storage'
 import { SERVER_URL, LCW_DEEP_LINK } from '../app.config'
 import { pollExchange } from '../utils/exchanges'
 
-
 export default function LoginScanStep() {
   const [qrData, setQrData] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -20,32 +19,32 @@ export default function LoginScanStep() {
     let intervalId: NodeJS.Timeout
     ;(async () => {
       const { did: resumeDid } = await getOrCreateAppInstanceDid()
-  
+
       const res = await fetch(exchangeUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appInstanceDid: resumeDid })
       })
-  
+
       if (!res.ok) {
         setError('Failed to connect to the wallet')
         setIsLoading(false)
         return
       }
-  
+
       const chapiRequest = {
         credentialRequestOrigin: SERVER_URL,
         protocols: {
           vcapi: exchangeUrl
         }
       }
-  
+
       const encodedRequest = encodeURIComponent(JSON.stringify(chapiRequest))
       const lcwRequestUrl = `${LCW_DEEP_LINK}?request=${encodedRequest}`
-  
+
       setQrData(lcwRequestUrl)
       setIsLoading(false)
-  
+
       // Start polling using imported utility
       intervalId = setInterval(() => {
         pollExchange({
@@ -53,16 +52,14 @@ export default function LoginScanStep() {
           onFetchVP: (vp: any) => {
             console.log('[LoginScanStep] ✅ Got VP:', vp)
             clearInterval(intervalId)
-            
           },
           stopPolling: () => clearInterval(intervalId)
         })
       }, 3000)
     })()
-  
+
     return () => clearInterval(intervalId)
-  }, [])  
-  
+  }, [])
 
   return (
     <Box sx={{ width: '100%', bgcolor: '#FFFFFF', minHeight: '100vh' }}>

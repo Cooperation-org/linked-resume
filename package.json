@@ -25,6 +25,7 @@
     "html2pdf.js": "^0.10.2",
     "js-cookie": "^3.0.5",
     "jspdf": "^2.5.2",
+    "latex.js": "^0.12.6",
     "lucide-react": "^0.468.0",
     "pdfjs-dist": "4.8.69",
     "qrcode.react": "^4.2.0",

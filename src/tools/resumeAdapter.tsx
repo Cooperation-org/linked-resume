@@ -15,13 +15,12 @@ export const prepareResumeForVC = async (
   }
 
   const preparedResume = JSON.parse(JSON.stringify(resume))
-  
+
   // Convert file IDs to actual Google Drive URLs for saving
   let evidenceWithUrls: Record<string, string[][]> = {}
 
   // Add evidence/files data if provided
   if (sectionEvidence && allFiles) {
-
     Object.keys(sectionEvidence).forEach(sectionId => {
       const sectionFiles = sectionEvidence[sectionId]
       evidenceWithUrls[sectionId] = sectionFiles.map(itemFiles =>
@@ -77,13 +76,16 @@ export const prepareResumeForVC = async (
   }
 
   if (preparedResume.experience?.items) {
-    preparedResume.experience.items = preparedResume.experience.items.map((exp: any, index: number) => ({
-      ...exp,
-      stillEmployed: exp.currentlyEmployed ?? false,
-      title: exp.title ?? exp.position ?? '',
-      company: exp.company ?? '',
-      attachedFiles: evidenceWithUrls?.['Work Experience']?.[index] || exp.attachedFiles || []
-    }))
+    preparedResume.experience.items = preparedResume.experience.items.map(
+      (exp: any, index: number) => ({
+        ...exp,
+        stillEmployed: exp.currentlyEmployed ?? false,
+        title: exp.title ?? exp.position ?? '',
+        company: exp.company ?? '',
+        attachedFiles:
+          evidenceWithUrls?.['Work Experience']?.[index] || exp.attachedFiles || []
+      })
+    )
   }
 
   // Convert experience to employmentHistory and replace credential links with full content
@@ -103,7 +105,7 @@ export const prepareResumeForVC = async (
         return { ...exp, ...processedExp, attachedFiles }
       })
     )
-    
+
     // IMPORTANT: Also update the original experience.items with the processed credential links
     // This ensures the UI shows the correct credential data
     preparedResume.experience.items = preparedResume.employmentHistory
@@ -111,15 +113,18 @@ export const prepareResumeForVC = async (
 
   // Education
   if (preparedResume.education?.items) {
-    preparedResume.education.items = preparedResume.education.items.map((edu: any, index: number) => {
-      // Set degree and fieldOfStudy directly from type and programName if present
-      if (edu.type) edu.degree = edu.type
-      if (edu.programName) edu.fieldOfStudy = edu.programName
-      return {
-        ...edu,
-        attachedFiles: evidenceWithUrls?.['Education']?.[index] || edu.attachedFiles || []
+    preparedResume.education.items = preparedResume.education.items.map(
+      (edu: any, index: number) => {
+        // Set degree and fieldOfStudy directly from type and programName if present
+        if (edu.type) edu.degree = edu.type
+        if (edu.programName) edu.fieldOfStudy = edu.programName
+        return {
+          ...edu,
+          attachedFiles:
+            evidenceWithUrls?.['Education']?.[index] || edu.attachedFiles || []
+        }
       }
-    })
+    )
     preparedResume.educationAndLearning = await Promise.all(
       preparedResume.education.items.map(async (edu: any, index: number) => {
         const processedEdu = await replaceCredentialLinksWithContent(edu)
@@ -132,22 +137,28 @@ export const prepareResumeForVC = async (
         return { ...base, attachedFiles }
       })
     )
-    
+
     // Update the original education.items with the processed credential links
     preparedResume.education.items = preparedResume.educationAndLearning
   }
 
   // Certifications
   if (preparedResume.certifications?.items) {
-    preparedResume.certifications.items = preparedResume.certifications.items.map((cert: any, index: number) => ({
-      ...cert,
-      attachedFiles: evidenceWithUrls?.['Certifications and Licenses']?.[index] || cert.attachedFiles || []
-    }))
+    preparedResume.certifications.items = preparedResume.certifications.items.map(
+      (cert: any, index: number) => ({
+        ...cert,
+        attachedFiles:
+          evidenceWithUrls?.['Certifications and Licenses']?.[index] ||
+          cert.attachedFiles ||
+          []
+      })
+    )
     preparedResume.certificationsVC = await Promise.all(
       preparedResume.certifications.items.map(async (cert: any, index: number) => {
         const processedCert = await replaceCredentialLinksWithContent(cert)
         // Add attachedFiles from evidence if available
-        const attachedFiles = evidenceWithUrls?.['Certifications and Licenses']?.[index] || []
+        const attachedFiles =
+          evidenceWithUrls?.['Certifications and Licenses']?.[index] || []
         return {
           ...cert,
           credentialLink: cert.credentialLink ?? '',
@@ -156,7 +167,7 @@ export const prepareResumeForVC = async (
         }
       })
     )
-    
+
     // Update the original certifications.items with the processed credential links
     preparedResume.certifications.items = preparedResume.certificationsVC
   }
@@ -169,17 +180,19 @@ export const prepareResumeForVC = async (
         return { ...skill, ...processedSkill }
       })
     )
-    
+
     // Update the original skills.items with the processed credential links
     preparedResume.skills.items = preparedResume.skillsVC
   }
 
   // Projects
   if (preparedResume.projects?.items) {
-    preparedResume.projects.items = preparedResume.projects.items.map((proj: any, index: number) => ({
-      ...proj,
-      attachedFiles: evidenceWithUrls?.['Projects']?.[index] || proj.attachedFiles || []
-    }))
+    preparedResume.projects.items = preparedResume.projects.items.map(
+      (proj: any, index: number) => ({
+        ...proj,
+        attachedFiles: evidenceWithUrls?.['Projects']?.[index] || proj.attachedFiles || []
+      })
+    )
     preparedResume.projectsVC = await Promise.all(
       preparedResume.projects.items.map(async (proj: any, index: number) => {
         const processedProj = await replaceCredentialLinksWithContent(proj)
@@ -188,42 +201,53 @@ export const prepareResumeForVC = async (
         return { ...proj, ...processedProj, attachedFiles }
       })
     )
-    
+
     // Update the original projects.items with the processed credential links
     preparedResume.projects.items = preparedResume.projectsVC
   }
 
   // Professional Affiliations
   if (preparedResume.professionalAffiliations?.items) {
-    preparedResume.professionalAffiliations.items = preparedResume.professionalAffiliations.items.map((aff: any, index: number) => ({
-      ...aff,
-      attachedFiles: evidenceWithUrls?.['Professional Affiliations']?.[index] || aff.attachedFiles || []
-    }))
+    preparedResume.professionalAffiliations.items =
+      preparedResume.professionalAffiliations.items.map((aff: any, index: number) => ({
+        ...aff,
+        attachedFiles:
+          evidenceWithUrls?.['Professional Affiliations']?.[index] ||
+          aff.attachedFiles ||
+          []
+      }))
     preparedResume.professionalAffiliationsVC = await Promise.all(
-      preparedResume.professionalAffiliations.items.map(async (aff: any, index: number) => {
-        const processedAff = await replaceCredentialLinksWithContent(aff)
-        // Add attachedFiles from evidence if available
-        const attachedFiles = evidenceWithUrls?.['Professional Affiliations']?.[index] || []
-        return {
-          ...aff,
-          description: aff.description ?? '',
-          // preserve RTE fields
-          ...processedAff,
-          attachedFiles
+      preparedResume.professionalAffiliations.items.map(
+        async (aff: any, index: number) => {
+          const processedAff = await replaceCredentialLinksWithContent(aff)
+          // Add attachedFiles from evidence if available
+          const attachedFiles =
+            evidenceWithUrls?.['Professional Affiliations']?.[index] || []
+          return {
+            ...aff,
+            description: aff.description ?? '',
+            // preserve RTE fields
+            ...processedAff,
+            attachedFiles
+          }
         }
-      })
+      )
     )
-    
+
     // Update the original professionalAffiliations.items with the processed credential links
-    preparedResume.professionalAffiliations.items = preparedResume.professionalAffiliationsVC
+    preparedResume.professionalAffiliations.items =
+      preparedResume.professionalAffiliationsVC
   }
 
   // Volunteer Work
   if (preparedResume.volunteerWork?.items) {
-    preparedResume.volunteerWork.items = preparedResume.volunteerWork.items.map((vol: any, index: number) => ({
-      ...vol,
-      attachedFiles: evidenceWithUrls?.['Volunteer Work']?.[index] || vol.attachedFiles || []
-    }))
+    preparedResume.volunteerWork.items = preparedResume.volunteerWork.items.map(
+      (vol: any, index: number) => ({
+        ...vol,
+        attachedFiles:
+          evidenceWithUrls?.['Volunteer Work']?.[index] || vol.attachedFiles || []
+      })
+    )
     preparedResume.volunteerWorkVC = await Promise.all(
       preparedResume.volunteerWork.items.map(async (vol: any, index: number) => {
         const processedVol = await replaceCredentialLinksWithContent(vol)
@@ -232,7 +256,7 @@ export const prepareResumeForVC = async (
         return { ...vol, ...processedVol, attachedFiles }
       })
     )
-    
+
     // Update the original volunteerWork.items with the processed credential links
     preparedResume.volunteerWork.items = preparedResume.volunteerWorkVC
   }

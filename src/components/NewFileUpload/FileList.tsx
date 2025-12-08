@@ -414,9 +414,9 @@ const FileListDisplay: React.FC<FileListProps> = ({
                   </ListItemAvatar>
                   <ListItemText
                     primary={rf.name}
-                    primaryTypographyProps={{ 
+                    primaryTypographyProps={{
                       fontSize: '14px',
-                      sx: { 
+                      sx: {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         display: '-webkit-box',
