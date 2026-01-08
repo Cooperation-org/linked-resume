@@ -270,19 +270,22 @@ const RightSidebar = ({
         Array.isArray(section.items)
       ) {
         for (const item of section.items) {
+          const candidate = item as any
+          const selectedCredentials = candidate?.selectedCredentials
           // Check selectedCredentials array
-          if (item.selectedCredentials && Array.isArray(item.selectedCredentials)) {
+          if (selectedCredentials && Array.isArray(selectedCredentials)) {
             if (
-              item.selectedCredentials.some(
-                (cred: any) => cred.id === vcId || cred.fileId === vcId
+              selectedCredentials.some(
+                (cred: any) => cred?.id === vcId || cred?.fileId === vcId
               )
             ) {
               return true
             }
           }
           // Also check credentialLink in case it contains the ID
-          if (item.credentialLink && typeof item.credentialLink === 'string') {
-            if (item.credentialLink.includes(vcId)) {
+          const credentialLink = candidate?.credentialLink
+          if (credentialLink && typeof credentialLink === 'string') {
+            if (credentialLink.includes(vcId)) {
               return true
             }
           }

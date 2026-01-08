@@ -204,6 +204,25 @@ interface Language extends VerifiableItem {
   evidence?: string[]
 }
 
+interface Recommendation {
+  id: string
+  author: string
+  relationship?: string
+  email?: string
+  skills?: string[]
+  message: string
+  createdAt?: string
+}
+
+interface Testimonial extends VerifiableItem {
+  author: string
+  text: string
+  relationship?: string
+  email?: string
+  skills?: string[]
+  createdAt?: string
+}
+
 // Main Resume Interface
 interface Resume {
   id: string

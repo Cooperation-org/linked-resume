@@ -572,12 +572,17 @@ const ResumeEditor: React.FC = () => {
       }
 
       // Find the item that contains the selected text
-      const itemIndex = sectionItems.findIndex(
-        item =>
-          item.description?.includes(text) ||
-          item.name?.includes(text) ||
-          item.title?.includes(text)
-      )
+      const matchesText = (value?: string) =>
+        typeof value === 'string' && value.includes(text)
+
+      const itemIndex = sectionItems.findIndex(item => {
+        const candidate = item as any
+        return (
+          matchesText(candidate?.description) ||
+          matchesText(candidate?.name) ||
+          matchesText(candidate?.title)
+        )
+      })
 
       if (itemIndex === -1) {
         console.error('Could not find item containing selected text')

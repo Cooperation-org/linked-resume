@@ -30,6 +30,10 @@ import ScienceIcon from '@mui/icons-material/Science'
 import { HtmlGenerator, parse } from 'latex.js'
 import resumeToLatex from '../tools/resumeToLatex'
 import '../styles/pdf-export.css'
+import {
+  fetchRecommendations,
+  RecommendationEntry
+} from '../services/recommendationService'
 
 type RawCredentialData = {
   content?: {
@@ -60,6 +64,7 @@ const PreviewPageFromDrive: React.FC = () => {
     message: string
     severity: 'success' | 'info' | 'error'
   }>({ open: false, message: '', severity: 'success' })
+  const [recommendations, setRecommendations] = useState<RecommendationEntry[]>([])
   const latexSource = useMemo(
     () => (resumeData ? resumeToLatex(resumeData) : ''),
     [resumeData]
@@ -131,6 +136,20 @@ const PreviewPageFromDrive: React.FC = () => {
     } catch {
       setSnackbar({ open: true, message: 'Failed to copy link', severity: 'error' })
     }
+  }
+
+  const handleAskForRecommendation = () => {
+    if (!id) return
+    const url = `${window.location.origin}/resume/recommend/${id}`
+    const userEmail = resumeData?.contact?.email || ''
+    const fullName = resumeData?.contact?.fullName || 'my resume'
+    const subject = encodeURIComponent(`Recommendation request for ${fullName}`)
+    const body = encodeURIComponent(
+      `Hi there,\n\nCould you please share a quick recommendation for my resume? You can use this form:\n${url}\n\nThank you!\n${fullName}${
+        userEmail ? `\n\nYou can reply to me at: ${userEmail}` : ''
+      }`
+    )
+    window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
   const handleDownloadJson = () => {
@@ -617,6 +636,16 @@ const PreviewPageFromDrive: React.FC = () => {
     }
   }, [id, safeGet, extractSocialLinks])
 
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!id) return
+      const entries = await fetchRecommendations(id)
+      setRecommendations(entries)
+    }
+
+    loadRecommendations()
+  }, [id])
+
   if (isLoading) {
     return (
       <Box
@@ -779,6 +808,14 @@ const PreviewPageFromDrive: React.FC = () => {
             Copy Share Link
           </MenuItem>
           <MenuItem
+            onClick={() => {
+              setExportAnchorEl(null)
+              handleAskForRecommendation()
+            }}
+          >
+            Ask for Recommendation
+          </MenuItem>
+          <MenuItem
             disabled={!latexSource}
             onClick={() => {
               setExportAnchorEl(null)
@@ -817,7 +854,13 @@ const PreviewPageFromDrive: React.FC = () => {
           transformOrigin: 'top center'
         }}
       >
-        {resumeData && <ResumePreview data={resumeData} forcedId={id!} />}
+        {resumeData && (
+          <ResumePreview
+            data={resumeData}
+            forcedId={id!}
+            recommendations={recommendations}
+          />
+        )}
       </Box>
 
       <Box

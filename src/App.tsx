@@ -29,6 +29,7 @@ import RawPreview from './pages/credential-raw'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import { getOrCreateAppInstanceDid } from '@cooperation/vc-storage'
 import ProtectedRoute from './components/ProtectedRoute'
+import RecommendationPage from './pages/RecommendationPage'
 
 const App = () => {
   const dispatch: AppDispatch = useDispatch()
@@ -78,6 +79,7 @@ const App = () => {
             <Route path='/resume/view/:id' element={<PreviewPageFromDrive />} />
             <Route path='/myresumes' element={<MyResumes />} />
           </Route>
+        <Route path='/resume/recommend/:id' element={<RecommendationPage />} />
           <Route path='*' element={<Error404 />} />
         </Route>
         {/* Landing page outside of Layout */}

@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useMemo
 } from 'react'
-import { Box, Typography, Link } from '@mui/material'
+import { Box, Typography, Link, Chip } from '@mui/material'
 import ResumeQRCode from './ResumeQRCode'
 import { BlueVerifiedBadge } from '../assets/svgs'
 import { useSelector } from 'react-redux'
@@ -18,6 +18,7 @@ import DialogContent from '@mui/material/DialogContent'
 import CloseIcon from '@mui/icons-material/Close'
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
+import { RecommendationEntry } from '../services/recommendationService'
 
 const PAGE_SIZE = { width: '210mm', height: '297mm' }
 const HEADER_HEIGHT_PX = 150
@@ -1336,6 +1337,99 @@ const HobbiesSection: React.FC<{ items: string[] }> = ({ items }) => {
   )
 }
 
+const formatRecommendationDate = (value?: string) => {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({ entries }) => {
+  if (!entries?.length) return null
+
+  return (
+    <Box sx={{ mb: '15px' }}>
+      <SectionTitle>Recommendations</SectionTitle>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {entries.map(entry => (
+          <Box
+            key={entry.id}
+            sx={{
+              p: 1.2,
+              border: '1px solid #E5E7EB',
+              borderRadius: 1,
+              backgroundColor: '#F9FAFB'
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 700,
+                fontSize: '15px',
+                fontFamily: 'Arial',
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 1
+              }}
+            >
+              <span>
+                {entry.author}
+                {entry.relationship ? ` • ${entry.relationship}` : ''}
+              </span>
+              <span style={{ color: '#6B7280', fontWeight: 500, fontSize: '12px' }}>
+                {formatRecommendationDate(entry.createdAt)}
+              </span>
+            </Typography>
+            {entry.email && (
+              <Typography
+                sx={{
+                  color: '#2563EB',
+                  fontSize: '13px',
+                  fontFamily: 'Arial',
+                  mb: 0.5
+                }}
+              >
+                {entry.email}
+              </Typography>
+            )}
+            <Typography
+              sx={{
+                fontSize: '14px',
+                color: '#111827',
+                fontFamily: 'Arial',
+                lineHeight: 1.4,
+                whiteSpace: 'pre-line'
+              }}
+            >
+              {entry.message}
+            </Typography>
+            {entry.skills && entry.skills.length > 0 && (
+              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {entry.skills.map(skill => (
+                  <Chip
+                    key={skill}
+                    label={skill}
+                    size='small'
+                    sx={{
+                      backgroundColor: '#E0E7FF',
+                      color: '#1E3A8A',
+                      fontWeight: 600,
+                      height: 24
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  )
+}
+
 // Improved usePagination that handles item-level splitting
 function usePagination(content: ReactNode[]) {
   const [pages, setPages] = useState<ReactNode[][]>([])
@@ -1453,10 +1547,11 @@ function getSummary(resume: any) {
   return resume.summary || ''
 }
 
-const ResumePreview: React.FC<{ data?: Resume; forcedId?: string }> = ({
-  data: propData,
-  forcedId
-}) => {
+const ResumePreview: React.FC<{
+  data?: Resume
+  forcedId?: string
+  recommendations?: RecommendationEntry[]
+}> = ({ data: propData, forcedId, recommendations = [] }) => {
   const storeResume = useSelector((state: RootState) => state.resume?.resume || null)
   const resume = propData || storeResume
 
@@ -1630,6 +1725,12 @@ const ResumePreview: React.FC<{ data?: Resume; forcedId?: string }> = ({
         })
       }
 
+      if (recommendations?.length) {
+        elements.push(
+          <RecommendationsSection key='recommendations' entries={recommendations} />
+        )
+      }
+
       // Volunteer Work - add title then each item separately
       if (resume.volunteerWork?.items?.length) {
         elements.push(
@@ -1651,8 +1752,7 @@ const ResumePreview: React.FC<{ data?: Resume; forcedId?: string }> = ({
       }
     }
     return elements
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // NEVER include resume here - it causes infinite loops!
+  }, [recommendations, resume])
 
   // Now use pagination with the flattened content elements
   const { pages, measureRef } = usePagination(contentSections)

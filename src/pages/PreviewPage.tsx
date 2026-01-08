@@ -33,6 +33,10 @@ import { setSelectedResume } from '../redux/slices/resume'
 import { AppDispatch, RootState } from '../redux/store'
 import resumeToLatex from '../tools/resumeToLatex'
 import { HtmlGenerator, parse } from 'latex.js'
+import {
+  fetchRecommendations,
+  RecommendationEntry
+} from '../services/recommendationService'
 
 const PreviewPage = () => {
   const [isDraftSaving, setIsDraftSaving] = useState(false)
@@ -47,6 +51,7 @@ const PreviewPage = () => {
     message: string
     severity: 'success' | 'info' | 'error'
   }>({ open: false, message: '', severity: 'success' })
+  const [recommendations, setRecommendations] = useState<RecommendationEntry[]>([])
   const location = useLocation()
   const dispatch = useDispatch<AppDispatch>()
 
@@ -110,6 +115,16 @@ const PreviewPage = () => {
 
     fetchResumeFromDrive()
   }, [resumeId, dispatch])
+
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!resumeId) return
+      const entries = await fetchRecommendations(resumeId)
+      setRecommendations(entries)
+    }
+
+    loadRecommendations()
+  }, [resumeId])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -238,6 +253,20 @@ const PreviewPage = () => {
     } catch {
       setSnackbar({ open: true, message: 'Failed to copy link', severity: 'error' })
     }
+  }
+
+  const handleAskForRecommendation = () => {
+    if (!resumeId) return
+    const url = `${window.location.origin}/resume/recommend/${resumeId}`
+    const userEmail = resumeData?.contact?.email || ''
+    const fullName = resumeData?.contact?.fullName || 'my resume'
+    const subject = encodeURIComponent(`Recommendation request for ${fullName}`)
+    const body = encodeURIComponent(
+      `Hi there,\n\nCould you please share a quick recommendation for my resume? You can use this form:\n${url}\n\nThank you!\n${fullName}${
+        userEmail ? `\n\nYou can reply to me at: ${userEmail}` : ''
+      }`
+    )
+    window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
   const handleDownloadJson = () => {
@@ -442,6 +471,15 @@ const PreviewPage = () => {
           Copy Share Link
         </MenuItem>
         <MenuItem
+          disabled={!resumeId}
+          onClick={() => {
+            setExportAnchorEl(null)
+            handleAskForRecommendation()
+          }}
+        >
+          Ask for Recommendation
+        </MenuItem>
+        <MenuItem
           disabled={!latexSource}
           onClick={() => {
             setExportAnchorEl(null)
@@ -479,7 +517,7 @@ const PreviewPage = () => {
           transformOrigin: 'top center'
         }}
       >
-        <ResumePreview data={resumeData} />
+        <ResumePreview data={resumeData} recommendations={recommendations} />
       </Box>
 
       <Box
