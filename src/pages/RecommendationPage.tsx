@@ -169,14 +169,14 @@ const RecommendationPage: React.FC = () => {
   return (
     <Box
       sx={{
-        width: '100%',
+        width: { xs: '90%', md: '100%' },
         minHeight: '100vh',
         bgcolor: 'background.default',
-        py: 4,
-        px: 4
+        py: { xs: 3, md: 4 },
+        px: { xs: 0, md: 4 }
       }}
     >
-      <Box sx={{ maxWidth: 1280, mx: 'auto', px: 4 }}>
+      <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 0, sm: 2, md: 4 } }}>
         <Stack spacing={1} sx={{ mb: 3 }}>
           <Typography variant='h4' sx={{ fontWeight: 700 }}>
             Share a Recommendation
@@ -197,7 +197,8 @@ const RecommendationPage: React.FC = () => {
             elevation={1}
             sx={{
               flex: { xs: '1 1 auto', lg: '0 0 420px' },
-              p: 3,
+              maxWidth: { xs: '100%', md: 520 },
+              p: { xs: 2.5, md: 3 },
               width: '100%'
             }}
           >
@@ -315,7 +316,14 @@ const RecommendationPage: React.FC = () => {
             </form>
           </Paper>
 
-          <Box sx={{ flex: 1, width: '100%', overflowX: 'auto' }}>
+          <Box
+            sx={{
+              flex: 1,
+              width: '100%',
+              overflowX: 'auto',
+              px: { xs: 0, sm: 1 }
+            }}
+          >
             {loadingResume ? (
               <Box
                 sx={{
@@ -331,7 +339,13 @@ const RecommendationPage: React.FC = () => {
             ) : loadingError ? (
               <Alert severity='error'>{loadingError}</Alert>
             ) : resumeData ? (
-              <Box sx={{ transform: 'scale(0.9)', transformOrigin: 'top left' }}>
+              <Box
+                sx={{
+                  transform: { xs: 'scale(1)', md: 'scale(0.95)' },
+                  transformOrigin: 'top left',
+                  minWidth: { xs: '320px', sm: '360px', md: '720px' }
+                }}
+              >
                 <ResumePreview
                   data={resumeData}
                   forcedId={resumeId}
