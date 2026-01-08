@@ -167,8 +167,16 @@ const RecommendationPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
-      <Box sx={{ maxWidth: 1280, mx: 'auto', px: 2 }}>
+    <Box
+      sx={{
+        width: '100%',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+        py: 4,
+        px: 4
+      }}
+    >
+      <Box sx={{ maxWidth: 1280, mx: 'auto', px: 4 }}>
         <Stack spacing={1} sx={{ mb: 3 }}>
           <Typography variant='h4' sx={{ fontWeight: 700 }}>
             Share a Recommendation
@@ -202,7 +210,9 @@ const RecommendationPage: React.FC = () => {
                   label='Your name'
                   required
                   value={formState.author}
-                  onChange={e => setFormState(prev => ({ ...prev, author: e.target.value }))}
+                  onChange={e =>
+                    setFormState(prev => ({ ...prev, author: e.target.value }))
+                  }
                   fullWidth
                 />
                 <TextField
@@ -217,7 +227,9 @@ const RecommendationPage: React.FC = () => {
                   label='Email (optional)'
                   type='email'
                   value={formState.email}
-                  onChange={e => setFormState(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={e =>
+                    setFormState(prev => ({ ...prev, email: e.target.value }))
+                  }
                   fullWidth
                 />
                 <Box>
@@ -233,7 +245,11 @@ const RecommendationPage: React.FC = () => {
                   />
                   <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {(formState.skills ?? []).map(skill => (
-                      <Chip key={skill} label={skill} onDelete={() => removeSkill(skill)} />
+                      <Chip
+                        key={skill}
+                        label={skill}
+                        onDelete={() => removeSkill(skill)}
+                      />
                     ))}
                   </Box>
                 </Box>
@@ -243,7 +259,9 @@ const RecommendationPage: React.FC = () => {
                   multiline
                   minRows={4}
                   value={formState.message}
-                  onChange={e => setFormState(prev => ({ ...prev, message: e.target.value }))}
+                  onChange={e =>
+                    setFormState(prev => ({ ...prev, message: e.target.value }))
+                  }
                   fullWidth
                 />
                 <Button
@@ -337,4 +355,3 @@ const RecommendationPage: React.FC = () => {
 }
 
 export default RecommendationPage
-
