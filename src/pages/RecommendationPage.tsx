@@ -269,6 +269,15 @@ const RecommendationPage: React.FC = () => {
                   type='submit'
                   disabled={submitting || !resumeId}
                   startIcon={submitting ? <CircularProgress size={18} /> : null}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    borderRadius: '100px',
+                    px: 2.5,
+                    py: 1.1,
+                    backgroundColor: '#3a35a2',
+                    '&:hover': { backgroundColor: '#2f2e8c' }
+                  }}
                 >
                   {submitting ? 'Submitting...' : 'Submit Recommendation'}
                 </Button>
