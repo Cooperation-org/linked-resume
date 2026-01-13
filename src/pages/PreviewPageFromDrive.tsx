@@ -140,12 +140,13 @@ const PreviewPageFromDrive: React.FC = () => {
 
   const handleAskForRecommendation = () => {
     if (!id) return
-    const url = `${window.location.origin}/resume/recommend/${id}`
+    const recommendationFormUrl = `${window.location.origin}/resume/recommend/${id}`
+    const resumeLink = window.location.href
     const userEmail = resumeData?.contact?.email || ''
     const fullName = resumeData?.contact?.fullName || 'my resume'
     const subject = encodeURIComponent(`Recommendation request for ${fullName}`)
     const body = encodeURIComponent(
-      `Hi there,\n\nCould you please share a quick recommendation for my resume? You can use this form:\n${url}\n\nThank you!\n${fullName}${
+      `Hi there,\n\nCould you please share a quick recommendation for my resume? You can review my resume here:\n${resumeLink}\n\nPlease submit your recommendation using this form:\n${recommendationFormUrl}\n\nThank you!\n${fullName}${
         userEmail ? `\n\nYou can reply to me at: ${userEmail}` : ''
       }`
     )
