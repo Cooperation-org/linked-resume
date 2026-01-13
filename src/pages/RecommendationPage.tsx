@@ -83,7 +83,7 @@ const RecommendationPage: React.FC = () => {
     >
       <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 0, sm: 2, md: 4 } }}>
         <Stack spacing={1} sx={{ mb: 3 }}>
-          <Typography variant='h4' sx={{ fontWeight: 700 }}>
+          <Typography variant='h4' sx={{ fontWeight: 700, pt: 4 }}>
             Share a Recommendation
           </Typography>
           <Typography variant='body1' color='text.secondary'>

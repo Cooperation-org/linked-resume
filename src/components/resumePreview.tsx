@@ -21,10 +21,14 @@ import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { RecommendationEntry } from '../types/resumeSections'
 
 const PAGE_SIZE = { width: '210mm', height: '297mm' }
+const PAGE_MAX_WIDTH = '210mm'
 const HEADER_HEIGHT_PX = 150
 const FOOTER_HEIGHT_PX = 60 // Footer height including padding (60px + 30px py)
 const CONTENT_PADDING_TOP = 20
 const CONTENT_PADDING_BOTTOM = 15
+const TEXT_SM = { xs: '13px', sm: '14px' }
+const TEXT_MD = { xs: '14px', sm: '16px' }
+const TITLE_MD = { xs: '15px', sm: '17px' }
 
 const mmToPx = (mm: number) => mm * 3.779527559
 
@@ -36,7 +40,7 @@ const SectionTitle: React.FC<{ children: ReactNode }> = ({ children }) => (
       fontWeight: 700,
       mb: '8px',
       lineHeight: '20px',
-      fontSize: '17px',
+      fontSize: TITLE_MD,
       letterSpacing: 0.1,
       color: '#000'
     }}
@@ -127,42 +131,74 @@ const FirstPageHeader: React.FC<{
       sx={{
         display: 'flex',
         justifyContent: 'space-between',
+        alignItems: 'stretch',
+        gap: { xs: 2, sm: 0 },
+        flexWrap: 'wrap',
         backgroundColor: '#F7F9FC',
-        height: `fit-content`
+        height: 'fit-content',
+        px: { xs: '16px', sm: 0 },
+        py: { xs: 2, sm: 0 }
       }}
     >
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          ml: '45px',
+          ml: { xs: 0, sm: '45px' },
           justifyContent: 'center',
           gap: 0.5,
-          py: 2
+          py: 2,
+          flex: 1,
+          minWidth: 0
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: { xs: 1, sm: 2 },
+            flexWrap: 'wrap'
+          }}
+        >
           <Typography
-            sx={{ fontWeight: 600, color: '#2E2E48', fontSize: '28px', lineHeight: 1 }}
+            sx={{
+              fontWeight: 600,
+              color: '#2E2E48',
+              fontSize: { xs: '20px', sm: '28px' },
+              lineHeight: 1
+            }}
           >
             {fullName}
           </Typography>
           {city && (
-            <Typography sx={{ fontWeight: 400, color: '#666', fontSize: '18px' }}>
+            <Typography
+              sx={{
+                fontWeight: 400,
+                color: '#666',
+                fontSize: { xs: '15px', sm: '18px' }
+              }}
+            >
               {city}
             </Typography>
           )}
         </Box>
 
         {(email || phone) && (
-          <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: { xs: 1.5, sm: 3 },
+              alignItems: 'center',
+              flexWrap: 'wrap'
+            }}
+          >
             {email && (
               <Link
                 href={`mailto:${email}`}
                 sx={{
                   color: '#2563EB',
                   textDecoration: 'none',
-                  fontSize: '15px',
+                  fontSize: { xs: '14px', sm: '15px' },
                   fontWeight: 400,
                   fontFamily: 'Arial',
                   '&:hover': { textDecoration: 'underline' }
@@ -172,7 +208,9 @@ const FirstPageHeader: React.FC<{
               </Link>
             )}
             {email && phone && (
-              <Typography sx={{ color: '#666', fontSize: '15px' }}>|</Typography>
+              <Typography sx={{ color: '#666', fontSize: { xs: '14px', sm: '15px' } }}>
+                |
+              </Typography>
             )}
             {phone && (
               <Link
@@ -180,7 +218,7 @@ const FirstPageHeader: React.FC<{
                 sx={{
                   color: '#2563EB',
                   textDecoration: 'none',
-                  fontSize: '15px',
+                  fontSize: { xs: '14px', sm: '15px' },
                   fontWeight: 400,
                   fontFamily: 'Arial',
                   '&:hover': { textDecoration: 'underline' }
@@ -236,14 +274,17 @@ const FirstPageHeader: React.FC<{
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
-          height: '100%'
+          height: '100%',
+          width: { xs: '100%', sm: 'auto' },
+          justifyContent: 'flex-end',
+          gap: { xs: 2, sm: 0 }
         }}
       >
         <Box
           sx={{
             textAlign: 'center',
             py: '20px',
-            mr: '15px',
+            mr: { xs: 0, sm: '15px' },
             display: hasValidId ? 'block' : 'none'
           }}
         >
@@ -272,12 +313,12 @@ const FirstPageHeader: React.FC<{
             alignItems: 'center',
             justifyContent: 'center',
             height: `${HEADER_HEIGHT_PX}px`,
-            width: '128px',
+            width: { xs: '108px', sm: '128px' },
             backgroundColor: '#2563EB'
           }}
         >
           <ResumeQRCode
-            size={86}
+            size={72}
             bgColor='transparent'
             fgColor='#fff'
             forcedId={forcedId}
@@ -299,10 +340,16 @@ const SubsequentPageHeader: React.FC<{ fullName: string }> = ({ fullName }) => {
         alignItems: 'center',
         backgroundColor: '#F7F9FC',
         height: '60px', // Narrower header for subsequent pages
-        pl: '45px'
+        pl: { xs: '20px', sm: '45px' }
       }}
     >
-      <Typography sx={{ fontWeight: 600, color: '#2E2E48', fontSize: '24px' }}>
+      <Typography
+        sx={{
+          fontWeight: 600,
+          color: '#2E2E48',
+          fontSize: { xs: '20px', sm: '24px' }
+        }}
+      >
         {fullName}
       </Typography>
     </Box>
@@ -390,7 +437,7 @@ const SummarySection: React.FC<{ summary?: string }> = ({ summary }) => {
         sx={{
           color: '#000',
           fontWeight: 400,
-          fontSize: '14px', // Reduced from 16px
+          fontSize: TEXT_SM, // Reduced from 16px
           fontFamily: 'Arial',
           lineHeight: 1.4
         }}
@@ -784,7 +831,7 @@ const ExperienceItem: React.FC<{
           variant='subtitle1'
           sx={{
             fontWeight: 700,
-            fontSize: '16px', // Standardized font size
+            fontSize: TEXT_MD, // Standardized font size
             fontFamily: 'Arial'
           }}
         >
@@ -796,7 +843,7 @@ const ExperienceItem: React.FC<{
         sx={{
           color: '#000',
           fontWeight: 400,
-          fontSize: '14px', // Slightly smaller for company name
+          fontSize: TEXT_SM, // Slightly smaller for company name
           fontFamily: 'Arial'
         }}
       >
@@ -809,7 +856,7 @@ const ExperienceItem: React.FC<{
             color: '#000',
             mb: 0.5,
             fontWeight: 400,
-            fontSize: '14px',
+            fontSize: TEXT_SM,
             fontFamily: 'Arial'
           }}
         >
@@ -822,7 +869,7 @@ const ExperienceItem: React.FC<{
           sx={{
             mb: 1,
             fontWeight: 400,
-            fontSize: '14px', // Reduced font size for descriptions
+            fontSize: TEXT_SM, // Reduced font size for descriptions
             fontFamily: 'Arial',
             lineHeight: 1.4 // Tighter line spacing
           }}
@@ -880,7 +927,7 @@ const EducationItem: React.FC<{
         <Box sx={{ ml: 0 }}>
           <Typography
             variant='subtitle1'
-            sx={{ fontWeight: 700, fontSize: '15px', fontFamily: 'Arial' }}
+            sx={{ fontWeight: 700, fontSize: TEXT_SM, fontFamily: 'Arial' }}
           >
             {educationTitle}
           </Typography>
@@ -890,7 +937,7 @@ const EducationItem: React.FC<{
               sx={{
                 color: '#000',
                 fontWeight: 400,
-                fontSize: '15px',
+                fontSize: TEXT_SM,
                 fontFamily: 'Arial'
               }}
             >
@@ -904,7 +951,7 @@ const EducationItem: React.FC<{
               sx={{
                 color: '#000',
                 fontWeight: 400,
-                fontSize: '14px',
+                fontSize: TEXT_SM,
                 fontFamily: 'Arial'
               }}
             >
@@ -952,14 +999,19 @@ const CertificationItem: React.FC<{
       <Box sx={{ ml: 0 }}>
         <Typography
           variant='subtitle1'
-          sx={{ fontWeight: 700, fontSize: '16px', fontFamily: 'Arial' }}
+          sx={{ fontWeight: 700, fontSize: TEXT_MD, fontFamily: 'Arial' }}
         >
           {item.name}
         </Typography>
         {item.issuer && (
           <Typography
             variant='body2'
-            sx={{ color: '#000', fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+            sx={{
+              color: '#000',
+              fontFamily: 'Arial',
+              fontSize: TEXT_MD,
+              fontWeight: 400
+            }}
           >
             Issued by {item.issuer}
           </Typography>
@@ -967,7 +1019,12 @@ const CertificationItem: React.FC<{
         {displayDate && (
           <Typography
             variant='body2'
-            sx={{ color: '#000', fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+            sx={{
+              color: '#000',
+              fontFamily: 'Arial',
+              fontSize: TEXT_MD,
+              fontWeight: 400
+            }}
           >
             {displayDate}
           </Typography>
@@ -978,7 +1035,7 @@ const CertificationItem: React.FC<{
             sx={{
               color: '#2563EB',
               fontFamily: 'Arial',
-              fontSize: '16px',
+              fontSize: TEXT_MD,
               fontWeight: 400
             }}
           >
@@ -1014,14 +1071,14 @@ const ProjectItem: React.FC<{
         <Box sx={{ ml: 0 }}>
           <Typography
             variant='subtitle1'
-            sx={{ fontWeight: 700, fontFamily: 'Arial', fontSize: '16px' }}
+            sx={{ fontWeight: 700, fontFamily: 'Arial', fontSize: TEXT_MD }}
           >
             {item.name}
           </Typography>
           {dateText && (
             <Typography
               variant='body2'
-              sx={{ fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+              sx={{ fontFamily: 'Arial', fontSize: TEXT_MD, fontWeight: 400 }}
             >
               {dateText}
             </Typography>
@@ -1029,7 +1086,7 @@ const ProjectItem: React.FC<{
           {item.description && (
             <Typography
               variant='body2'
-              sx={{ mb: 1, fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+              sx={{ mb: 1, fontFamily: 'Arial', fontSize: TEXT_MD, fontWeight: 400 }}
             >
               <HTMLWithVerifiedLinks htmlContent={item.description} />
             </Typography>
@@ -1073,7 +1130,7 @@ const ProfessionalAffiliationItem: React.FC<{
         <Box sx={{ ml: 0 }}>
           <Typography
             variant='subtitle1'
-            sx={{ fontWeight: 700, fontSize: '16px', fontFamily: 'Arial' }}
+            sx={{ fontWeight: 700, fontSize: TEXT_MD, fontFamily: 'Arial' }}
           >
             {item.name ?? item.role ?? 'Affiliation'}
             {item.organization && ` of the ${item.organization}`}
@@ -1084,7 +1141,7 @@ const ProfessionalAffiliationItem: React.FC<{
               sx={{
                 color: '#000',
                 fontFamily: 'Arial',
-                fontSize: '16px',
+                fontSize: TEXT_MD,
                 fontWeight: 400
               }}
             >
@@ -1097,7 +1154,7 @@ const ProfessionalAffiliationItem: React.FC<{
               sx={{
                 color: '#000',
                 fontFamily: 'Arial',
-                fontSize: '16px',
+                fontSize: TEXT_MD,
                 fontWeight: 400
               }}
             >
@@ -1139,14 +1196,14 @@ const VolunteerWorkItem: React.FC<{
         <Box sx={{ ml: 0 }}>
           <Typography
             variant='subtitle1'
-            sx={{ fontWeight: 700, fontFamily: 'Arial', fontSize: '16px' }}
+            sx={{ fontWeight: 700, fontFamily: 'Arial', fontSize: TEXT_MD }}
           >
             {item.role} at {item.organization}
           </Typography>
           {item.location && (
             <Typography
               variant='body2'
-              sx={{ fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+              sx={{ fontFamily: 'Arial', fontSize: TEXT_MD, fontWeight: 400 }}
             >
               {item.location}
             </Typography>
@@ -1154,7 +1211,7 @@ const VolunteerWorkItem: React.FC<{
           {dateText && (
             <Typography
               variant='body2'
-              sx={{ fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+              sx={{ fontFamily: 'Arial', fontSize: TEXT_MD, fontWeight: 400 }}
             >
               {dateText}
             </Typography>
@@ -1162,7 +1219,7 @@ const VolunteerWorkItem: React.FC<{
           {item.description && (
             <Typography
               variant='body2'
-              sx={{ mb: 1, fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+              sx={{ mb: 1, fontFamily: 'Arial', fontSize: TEXT_MD, fontWeight: 400 }}
             >
               <HTMLWithVerifiedLinks htmlContent={item.description} />
             </Typography>
@@ -1213,7 +1270,7 @@ const LanguageItem: React.FC<{ lang: Language; idx: number }> = ({ lang, idx }) 
         mb: 1
       }}
     >
-      <Typography sx={{ fontWeight: 400, fontSize: '16px', fontFamily: 'Arial' }}>
+      <Typography sx={{ fontWeight: 400, fontSize: TEXT_MD, fontFamily: 'Arial' }}>
         {lang.name} {lang.proficiency ? `(${lang.proficiency})` : ''}
       </Typography>
     </Box>
@@ -1226,7 +1283,7 @@ const HobbyItem: React.FC<{ hobby: string; idx: number }> = ({ hobby, idx }) => 
     <Typography
       component='li'
       key={`hobby-${idx}`}
-      sx={{ fontWeight: 400, fontSize: '16px', fontFamily: 'Arial', mb: 1 }}
+      sx={{ fontWeight: 400, fontSize: TEXT_MD, fontFamily: 'Arial', mb: 1 }}
     >
       {hobby}
     </Typography>
@@ -1239,13 +1296,13 @@ const PublicationItem: React.FC<{ item: Publication }> = ({ item }) => {
     <Box key={item.id} sx={{ mb: '10px' }}>
       <Typography
         variant='subtitle1'
-        sx={{ fontWeight: 700, fontFamily: 'Arial', fontSize: '16px' }}
+        sx={{ fontWeight: 700, fontFamily: 'Arial', fontSize: TEXT_MD }}
       >
         {item.title}
       </Typography>
       <Typography
         variant='body2'
-        sx={{ fontFamily: 'Arial', fontSize: '16px', fontWeight: 400 }}
+        sx={{ fontFamily: 'Arial', fontSize: TEXT_MD, fontWeight: 400 }}
       >
         {item.publisher} | {item.publishedDate || 'Published'}
       </Typography>
@@ -1283,7 +1340,7 @@ const SkillsSection: React.FC<{
       <Typography
         sx={{
           fontWeight: 400,
-          fontSize: '16px',
+          fontSize: TEXT_MD,
           fontFamily: 'Arial',
           display: 'flex',
           flexWrap: 'wrap',
@@ -1457,8 +1514,10 @@ function usePagination(content: ReactNode[]) {
         CONTENT_PADDING_TOP -
         CONTENT_PADDING_BOTTOM
 
-      measureRef.current.style.width = PAGE_SIZE.width
-      measureRef.current.style.padding = `${CONTENT_PADDING_TOP}px 50px ${CONTENT_PADDING_BOTTOM}px`
+      const horizontalPaddingPx = window.innerWidth < 640 ? 20 : 50
+      measureRef.current.style.width = '100%'
+      measureRef.current.style.maxWidth = PAGE_MAX_WIDTH
+      measureRef.current.style.padding = `${CONTENT_PADDING_TOP}px ${horizontalPaddingPx}px ${CONTENT_PADDING_BOTTOM}px`
 
       const contentElements = Array.from(measureRef.current.children)
       if (contentElements.length === 0) {
@@ -1770,7 +1829,10 @@ const ResumePreview: React.FC<{
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
+        gap: { xs: 2, sm: 0 },
         overflow: 'visible',
+        px: { xs: 1.5, sm: 0 },
         '@media print': { margin: 0, padding: 0 }
       }}
     >
@@ -1831,10 +1893,11 @@ const ResumePreview: React.FC<{
         sx={{
           visibility: 'hidden',
           position: 'absolute',
-          width: PAGE_SIZE.width,
+          width: '100%',
+          maxWidth: PAGE_MAX_WIDTH,
           pt: CONTENT_PADDING_TOP + 'px',
           pb: CONTENT_PADDING_BOTTOM + 'px',
-          px: '50px',
+          px: { xs: '20px', sm: '50px' },
           left: '-9999px', // Move far off screen
           top: 0
         }}
@@ -1851,7 +1914,8 @@ const ResumePreview: React.FC<{
               id={`page-${pageIndex}`}
               className='resume-page'
               sx={{
-                width: PAGE_SIZE.width,
+                width: '100%',
+                maxWidth: PAGE_MAX_WIDTH,
                 height: PAGE_SIZE.height,
                 position: 'relative',
                 bgcolor: '#fff',
@@ -1861,8 +1925,8 @@ const ResumePreview: React.FC<{
                 mb: '30px',
                 mt: pageIndex === 0 ? '10px' : 0,
                 '@media print': {
-                  width: '100%',
-                  height: '100%',
+                  width: PAGE_SIZE.width,
+                  height: PAGE_SIZE.height,
                   margin: 0,
                   padding: 0,
                   boxShadow: 'none'
@@ -1887,7 +1951,7 @@ const ResumePreview: React.FC<{
                 sx={{
                   pt: CONTENT_PADDING_TOP + 'px',
                   pb: CONTENT_PADDING_BOTTOM + 'px',
-                  px: '50px',
+                  px: { xs: '20px', sm: '50px' },
                   position: 'relative',
                   minHeight: 0,
                   height: `calc(100% - ${pageIndex === 0 ? HEADER_HEIGHT_PX : 60}px - ${FOOTER_HEIGHT_PX}px)`,
