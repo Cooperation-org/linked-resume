@@ -9,7 +9,7 @@ import React, {
 import { Box, Typography, Link, Chip } from '@mui/material'
 import ResumeQRCode from './ResumeQRCode'
 import { BlueVerifiedBadge } from '../assets/svgs'
-import { useSelector } from 'react-redux'
+import { useAppSelector } from '../redux/hooks'
 import { RootState } from '../redux/store'
 import { HTMLWithVerifiedLinks, isVerifiedLink } from '../tools/htmlUtils'
 import MinimalCredentialViewer from './MinimalCredentialViewer'
@@ -18,7 +18,7 @@ import DialogContent from '@mui/material/DialogContent'
 import CloseIcon from '@mui/icons-material/Close'
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
-import { RecommendationEntry } from '../services/recommendationService'
+import { RecommendationEntry } from '../types/resumeSections'
 
 const PAGE_SIZE = { width: '210mm', height: '297mm' }
 const HEADER_HEIGHT_PX = 150
@@ -1348,7 +1348,9 @@ const formatRecommendationDate = (value?: string) => {
   })
 }
 
-const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({ entries }) => {
+const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({
+  entries
+}) => {
   if (!entries?.length) return null
 
   return (
@@ -1552,7 +1554,9 @@ const ResumePreview: React.FC<{
   forcedId?: string
   recommendations?: RecommendationEntry[]
 }> = ({ data: propData, forcedId, recommendations = [] }) => {
-  const storeResume = useSelector((state: RootState) => state.resume?.resume || null)
+  const storeResume = useAppSelector(
+    (state: RootState) => state.resumeEditor?.resume || null
+  )
   const resume = propData || storeResume
 
   const [initialRenderComplete, setInitialRenderComplete] = useState(false)

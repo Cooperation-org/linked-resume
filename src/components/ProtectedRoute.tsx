@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
   redirectTo?: string
 }
 
-const ProtectedRoute = ({ redirectTo = '/login' }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ redirectTo = '/' }: ProtectedRouteProps) => {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
   const location = useLocation()
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Box, Typography, Button, Checkbox, styled } from '@mui/material'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { AppDispatch } from '../redux/store'
+import { useAppSelector } from '../redux/hooks'
 import { fetchVCs } from '../redux/slices/vc'
 
 interface CredentialOverlayProps {
@@ -111,7 +112,7 @@ const CredentialOverlay: React.FC<CredentialOverlayProps> = ({
     useState<string[]>(initialSelectedIDs)
 
   const dispatch: AppDispatch = useDispatch()
-  const { vcs } = useSelector((state: any) => state.vcReducer)
+  const { vcs } = useAppSelector(state => state.vc)
 
   // Filter out invalid VCs
   const validVCs = getValidVCs(vcs)

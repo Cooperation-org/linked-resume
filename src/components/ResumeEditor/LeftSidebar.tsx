@@ -6,8 +6,9 @@ import {
   InputAdornment,
   FormLabel
 } from '@mui/material'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { RootState } from '../../redux/store'
+import { useAppSelector } from '../../redux/hooks'
 import {
   SVGSectionIcon,
   SVGMail,
@@ -25,7 +26,7 @@ export const leftSections: (keyof Resume)[] = ['contact', 'languages']
 
 const LeftSidebar = () => {
   const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
 
   const handleContactChange = (field: string, value: string) => {
     if (!resume) return

@@ -21,14 +21,22 @@ import {
 } from '../../../assets/svgs'
 import TextEditor from '../../TextEditor/Texteditor'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CredentialOverlay from '../../CredentialsOverlay'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
 import AttachedFilesList from '../../common/AttachedFilesList'
 import VerifiedIcon from '@mui/icons-material/Verified'
+import {
+  calculateDuration,
+  dedupeSelectedCredentials,
+  buildCredentialLinks,
+  parseCredentialLink
+} from '../../../utils/resumeSections'
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
 
 const PinkSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
@@ -50,24 +58,6 @@ interface WorkExperienceProps {
   evidence?: string[][]
   allFiles?: FileItem[]
   onRemoveFile?: (sectionId: string, itemIndex: number, fileIndex: number) => void
-}
-
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  vc?: any // full object
-  fileId?: string
-}
-
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
 }
 
 interface WorkExperienceItem {
@@ -98,8 +88,8 @@ export default function WorkExperience({
   onRemoveFile
 }: Readonly<WorkExperienceProps>) {
   const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
+  const vcs = useAppSelector(state => state.vc.vcs)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
@@ -164,34 +154,6 @@ export default function WorkExperience({
     [dispatch]
   )
 
-  const calculateDuration = (
-    startDate: string,
-    endDate: string | undefined,
-    currentlyEmployed: boolean
-  ): string => {
-    if (!startDate) return ''
-    const end = currentlyEmployed || !endDate ? new Date() : new Date(endDate)
-    const start = new Date(startDate)
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return ''
-    }
-    let years = end.getFullYear() - start.getFullYear()
-    let months = end.getMonth() - start.getMonth()
-    if (months < 0) {
-      years--
-      months += 12
-    }
-    let result = ''
-    if (years > 0) {
-      result += `${years} year${years !== 1 ? 's' : ''}`
-    }
-    if (months > 0 || (years === 0 && months >= 0)) {
-      if (result) result += ' '
-      result += `${months} month${months !== 1 ? 's' : ''}`
-    }
-    return result || 'Less than a month'
-  }
-
   const dateChangeString = workExperiences
     .map(
       (exp, i) =>
@@ -253,34 +215,26 @@ export default function WorkExperience({
         let selectedCredentials = item.selectedCredentials || []
         if (item.credentialLink && selectedCredentials.length === 0) {
           try {
-            // credentialLink is a JSON string of an array of strings
             const credLinksArray = JSON.parse(item.credentialLink)
             if (Array.isArray(credLinksArray)) {
-              selectedCredentials = credLinksArray
-                .map((credLink: string) => {
-                  // Each credLink is "fileId,{vc json}"
-                  const commaIndex = credLink.indexOf(',')
-                  if (commaIndex > -1) {
-                    const fileId = credLink.substring(0, commaIndex)
-                    const vcJson = credLink.substring(commaIndex + 1)
-                    try {
-                      const vc = JSON.parse(vcJson)
-                      return {
-                        id: fileId, // Always use fileId as the id for proper matching
-                        url: '',
-                        name:
-                          vc?.credentialSubject?.achievement?.[0]?.name || `Credential`,
-                        vc: vc,
-                        fileId: fileId
-                      }
-                    } catch (e) {
-                      console.error('Error parsing VC JSON:', e)
-                      return null
-                    }
-                  }
-                  return null
-                })
-                .filter(Boolean)
+              const parsed = credLinksArray
+                .map((credLink: string) => parseCredentialLink(credLink))
+                .filter(Boolean) as {
+                credObj: any
+                credId: string
+                fileId: string
+              }[]
+              selectedCredentials = parsed.map(p => ({
+                id: p.fileId || p.credId,
+                url: '',
+                name:
+                  p.credObj?.credentialSubject?.achievement?.[0]?.name ||
+                  p.credObj?.credentialSubject?.credentialName ||
+                  'Credential',
+                vc: p.credObj,
+                fileId: p.fileId
+              }))
+              selectedCredentials = dedupeSelectedCredentials(selectedCredentials)
             }
           } catch (e) {
             console.error('Error parsing credentialLink:', e, 'for item:', item.title)
@@ -521,23 +475,14 @@ export default function WorkExperience({
             fileId: fileId
           }
         })
-        // Deduplicate by id
-        const deduped: SelectedCredential[] = Array.from(
-          new Map(selectedCredentials.map(c => [c.id, c])).values()
-        )
-        // Build credentialLink as a JSON stringified array
-        const credLinks = deduped
-          .map(cred => {
-            const fileId = cred.fileId || cred.id
-            return fileId && cred.vc ? `${fileId},${JSON.stringify(cred.vc)}` : ''
-          })
-          .filter(Boolean)
+        const deduped: SelectedCredential[] =
+          dedupeSelectedCredentials(selectedCredentials)
+        const credLinksString = buildCredentialLinks(deduped)
 
         console.log('Saving credential:', {
           activeSectionIndex,
           activeItemId,
-          credLinks,
-          stringified: JSON.stringify(credLinks),
+          credentialLink: credLinksString,
           deduped
         })
 
@@ -567,16 +512,9 @@ export default function WorkExperience({
           updated[targetIndex] = {
             ...targetItem,
             verificationStatus: 'verified',
-            credentialLink: JSON.stringify(credLinks), // always a stringified array
+            credentialLink: credLinksString,
             selectedCredentials: deduped
           }
-
-          console.log('Updated work experience:', updated[targetIndex])
-          console.log('Redux update with credentialLink:', {
-            itemId: updated[targetIndex].id,
-            credentialLink: updated[targetIndex].credentialLink,
-            type: typeof updated[targetIndex].credentialLink
-          })
 
           // Dispatch immediately for credential updates (no debouncing)
           dispatch(
@@ -607,22 +545,12 @@ export default function WorkExperience({
         const updated = [...prev]
         const exp = { ...updated[expIndex] }
         const newCreds = exp.selectedCredentials.filter((_, i) => i !== credIndex)
-        // Deduplicate by id
-        exp.selectedCredentials = Array.from(
-          new Map(newCreds.map(c => [c.id, c])).values()
-        )
+        exp.selectedCredentials = dedupeSelectedCredentials(newCreds)
         if (!exp.selectedCredentials.length) {
           exp.verificationStatus = 'unverified'
           exp.credentialLink = ''
         } else {
-          // Rebuild credentialLink in the same format as handleCredentialSelect
-          const credLinks = exp.selectedCredentials
-            .map(cred => {
-              const fileId = cred.fileId || cred.id
-              return fileId && cred.vc ? `${fileId},${JSON.stringify(cred.vc)}` : ''
-            })
-            .filter(Boolean)
-          exp.credentialLink = JSON.stringify(credLinks)
+          exp.credentialLink = buildCredentialLinks(exp.selectedCredentials)
         }
         updated[expIndex] = exp
         dispatch(

@@ -1,11 +1,12 @@
 import { Box, Typography, Button, Divider, Stack, CircularProgress } from '@mui/material'
 import { login } from '../../tools/auth'
-import { useSelector, useDispatch } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { useState, useEffect, useCallback } from 'react'
 import { checkmarkBlueSVG, checkmarkgraySVG } from '../../assets/svgs'
 import { useLocation } from 'react-router-dom'
 import { fetchVCs } from '../../redux/slices/vc'
 import { AppDispatch, RootState } from '../../redux/store'
+import { useAppSelector } from '../../redux/hooks'
 import MediaUploadSection from '../../components/NewFileUpload/MediaUploadSection'
 import useGoogleDrive, { DriveFileMeta } from '../../hooks/useGoogleDrive'
 import StorageService from '../../storage-singlton'
@@ -36,11 +37,11 @@ const RightSidebar = ({
   onAllFilesUpdate
 }: RightSidebarProps) => {
   const location = useLocation()
-  const { accessToken, isAuthenticated } = useSelector((state: RootState) => state.auth)
+  const { accessToken, isAuthenticated } = useAppSelector(state => state.auth)
   const dispatch: AppDispatch = useDispatch()
-  const { vcs } = useSelector((state: any) => state.vcReducer)
+  const { vcs } = useAppSelector(state => state.vc)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const resume = useSelector((state: RootState) => state.resume?.resume)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor?.resume)
 
   const { listFilesMetadata } = useGoogleDrive()
   const [remoteFiles, setRemoteFiles] = useState<DriveFileMeta[]>([])
@@ -127,11 +128,14 @@ const RightSidebar = ({
   }, [getAllFiles, onAllFilesUpdate])
 
   useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      return
+    }
     setIsLoading(true)
     dispatch(fetchVCs())
       .then(() => setIsLoading(false))
       .catch(() => setIsLoading(false))
-  }, [dispatch])
+  }, [dispatch, isAuthenticated, accessToken])
 
   const handleGoogleLogin = async () => {
     await login(location.pathname)

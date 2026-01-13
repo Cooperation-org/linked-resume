@@ -16,35 +16,25 @@ import { useParams } from 'react-router-dom'
 import ResumePreview from '../components/resumePreview'
 import { getFileViaFirebase } from '../firebase/storage'
 import { mapDriveResume } from '../utils/driveResumeMapper'
-import {
-  fetchRecommendations,
-  RecommendationEntry,
-  RecommendationInput,
-  submitRecommendation
-} from '../services/recommendationService'
-
-type RecommendationFormState = RecommendationInput & { skillsInput?: string }
+import { useRecommendations } from '../hooks/useRecommendations'
+import PageLoader from '../components/common/PageLoader'
 
 const RecommendationPage: React.FC = () => {
   const { id: resumeId } = useParams<{ id: string }>()
   const [resumeData, setResumeData] = useState<Resume | null>(null)
   const [loadingResume, setLoadingResume] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
-  const [recommendations, setRecommendations] = useState<RecommendationEntry[]>([])
-  const [formState, setFormState] = useState<RecommendationFormState>({
-    author: '',
-    message: '',
-    relationship: '',
-    email: '',
-    skills: [],
-    skillsInput: ''
-  })
-  const [submitting, setSubmitting] = useState(false)
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean
-    message: string
-    severity: 'success' | 'info' | 'error'
-  }>({ open: false, message: '', severity: 'success' })
+  const {
+    recommendations,
+    formState,
+    setFormState,
+    submitting,
+    snackbar,
+    setSnackbar,
+    removeSkill,
+    handleSkillsKeyDown,
+    handleSubmit
+  } = useRecommendations(resumeId || undefined)
 
   const loadResume = useMemo(
     () => async () => {
@@ -75,95 +65,10 @@ const RecommendationPage: React.FC = () => {
     loadResume()
   }, [loadResume])
 
-  useEffect(() => {
-    const loadRecommendations = async () => {
-      if (!resumeId) return
-      const entries = await fetchRecommendations(resumeId)
-      setRecommendations(entries)
-    }
-    loadRecommendations()
-  }, [resumeId])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!resumeId) return
-    if (!formState.author.trim() || !formState.message.trim()) {
-      setSnackbar({
-        open: true,
-        message: 'Please add your name and recommendation details.',
-        severity: 'error'
-      })
-      return
-    }
-    setSubmitting(true)
-    try {
-      const payload: RecommendationInput = {
-        author: formState.author.trim(),
-        message: formState.message.trim(),
-        relationship: formState.relationship?.trim(),
-        email: formState.email?.trim(),
-        skills: formState.skills ?? []
-      }
-      const created = await submitRecommendation(resumeId, payload)
-      if (created) {
-        setRecommendations(prev => [
-          { ...created, createdAt: new Date().toISOString() },
-          ...prev
-        ])
-        setFormState({
-          author: '',
-          message: '',
-          relationship: '',
-          email: '',
-          skills: [],
-          skillsInput: ''
-        })
-        setSnackbar({
-          open: true,
-          message: 'Recommendation submitted. Thank you!',
-          severity: 'success'
-        })
-      } else {
-        setSnackbar({
-          open: true,
-          message: 'Could not submit recommendation, please try again.',
-          severity: 'error'
-        })
-      }
-    } catch (err) {
-      console.error('Failed to submit recommendation', err)
-      setSnackbar({
-        open: true,
-        message: 'Could not submit recommendation, please try again.',
-        severity: 'error'
-      })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const addSkill = () => {
-    const value = formState.skillsInput?.trim()
-    if (!value) return
-    setFormState(prev => ({
-      ...prev,
-      skills: [...(prev.skills ?? []), value],
-      skillsInput: ''
-    }))
-  }
-
-  const removeSkill = (skill: string) => {
-    setFormState(prev => ({
-      ...prev,
-      skills: (prev.skills ?? []).filter(s => s !== skill)
-    }))
-  }
-
-  const handleSkillsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      addSkill()
-    }
+    await handleSubmit(resumeId)
   }
 
   return (
@@ -202,7 +107,7 @@ const RecommendationPage: React.FC = () => {
               width: '100%'
             }}
           >
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleFormSubmit}>
               <Stack spacing={2}>
                 <Typography variant='h6' sx={{ fontWeight: 700 }}>
                   Recommendation form
@@ -325,17 +230,7 @@ const RecommendationPage: React.FC = () => {
             }}
           >
             {loadingResume ? (
-              <Box
-                sx={{
-                  width: '100%',
-                  minHeight: '300px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <CircularProgress />
-              </Box>
+              <PageLoader message='Loading resume...' />
             ) : loadingError ? (
               <Alert severity='error'>{loadingError}</Alert>
             ) : resumeData ? (

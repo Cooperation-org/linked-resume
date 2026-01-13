@@ -10,8 +10,9 @@ import {
   Typography,
   Paper
 } from '@mui/material'
-import { useSelector, useDispatch } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { selectCredential, unselectCredential } from '../redux/slices/resume'
+import { useAppSelector } from '../redux/hooks'
 
 interface CredentialDialogProps {
   open: boolean
@@ -29,8 +30,8 @@ const CredentialDialog: React.FC<CredentialDialogProps> = ({
   onCredentialsSelected
 }) => {
   const dispatch = useDispatch()
-  const selectedCredentials = useSelector(
-    (state: any) => state.resume.selectedCredentials
+  const selectedCredentials = useAppSelector(
+    state => state.resumeEditor.selectedCredentials
   )
 
   const handleToggleCredential = (claimId: string) => {

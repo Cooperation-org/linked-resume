@@ -8,21 +8,14 @@ import {
   Button,
   IconButton,
   Tooltip,
-  Dialog,
-  DialogContent,
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import {
-  SVGSectionIcon,
-  SVGDownIcon,
-  SVGAddFiles,
-  SVGDeleteSection
-} from '../../../assets/svgs'
+import { SVGSectionIcon, SVGAddFiles, SVGDeleteSection } from '../../../assets/svgs'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import VerifiedIcon from '@mui/icons-material/Verified'
 import CloseIcon from '@mui/icons-material/Close'
@@ -30,18 +23,14 @@ import CredentialOverlay from '../../CredentialsOverlay'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import MinimalCredentialViewer from '../../MinimalCredentialViewer'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
-
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
-}
+import {
+  dedupeSelectedCredentials,
+  buildCredentialLinks,
+  parseCredentialLink
+} from '../../../utils/resumeSections'
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
+import SectionHeader from '../../common/SectionHeader'
 
 interface CertificationsAndLicensesProps {
   onAddFiles?: (itemIndex?: number) => void
@@ -65,15 +54,6 @@ interface CertificationItem {
   selectedCredentials: SelectedCredential[]
 }
 
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  isAttestation?: boolean
-  vc?: any // full object
-  fileId?: string // Added fileId to the interface
-}
-
 export default function CertificationsAndLicenses({
   onAddFiles,
   onDelete,
@@ -82,15 +62,15 @@ export default function CertificationsAndLicenses({
   allFiles = [],
   onRemoveFile
 }: Readonly<CertificationsAndLicensesProps>) {
-  const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const dispatch = useAppDispatch()
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
+  const vcs = useAppSelector(state => state.vc.vcs)
   // const [openCredDialog, setOpenCredDialog] = useState(false)
   // const [dialogCredObj, setDialogCredObj] = useState<any>(null)
 
@@ -138,19 +118,58 @@ export default function CertificationsAndLicenses({
         ? resume.certifications.items
         : []
     if (items.length > 0) {
-      const typedItems = items.map((item: any) => ({
-        name: item.name || '',
-        issuer: item.issuer || '',
-        issueDate: item.issueDate || '',
-        expiryDate: item.expiryDate || '',
-        credentialId: '', // always empty, never prefilled
-        noExpiration: Boolean(item.noExpiration),
-        id: item.id || '',
-        verificationStatus: item.verificationStatus || 'unverified',
-        credentialLink: item.credentialLink || '',
-        selectedCredentials: item.selectedCredentials || [],
-        ...item
-      }))
+      const typedItems = items.map((item: any, idx: number) => {
+        let selectedCredentials: SelectedCredential[] = item.selectedCredentials || []
+        if (
+          (!selectedCredentials || selectedCredentials.length === 0) &&
+          item.credentialLink
+        ) {
+          try {
+            const credLinksArray = JSON.parse(item.credentialLink)
+            if (Array.isArray(credLinksArray)) {
+              const parsed = credLinksArray
+                .map((credLink: string) => parseCredentialLink(credLink))
+                .filter(Boolean) as {
+                credObj: any
+                credId: string
+                fileId: string
+              }[]
+              selectedCredentials = parsed.map(p => ({
+                id: p.fileId || p.credId,
+                url: '',
+                name:
+                  p.credObj?.credentialSubject?.achievement?.[0]?.name ||
+                  p.credObj?.credentialSubject?.credentialName ||
+                  'Credential',
+                vc: p.credObj,
+                fileId: p.fileId
+              }))
+              selectedCredentials = dedupeSelectedCredentials(selectedCredentials)
+            }
+          } catch (e) {
+            console.error(
+              'Error parsing credentialLink:',
+              e,
+              'for certification item:',
+              item.id || idx
+            )
+          }
+        }
+
+        return {
+          name: item.name || '',
+          issuer: item.issuer || '',
+          issueDate: item.issueDate || '',
+          expiryDate: item.expiryDate || '',
+          credentialId: '', // always empty, never prefilled
+          noExpiration: Boolean(item.noExpiration),
+          id: item.id || '',
+          verificationStatus: item.verificationStatus || 'unverified',
+          credentialLink: item.credentialLink || '',
+          selectedCredentials,
+          ...item
+        }
+      })
 
       const shouldUpdate =
         initialLoadRef.current || typedItems.length !== certifications.length
@@ -316,22 +335,15 @@ export default function CertificationsAndLicenses({
             fileId: fileId
           }
         })
-        // Deduplicate by id
-        const deduped: SelectedCredential[] = Array.from(
-          new Map(selectedCredentials.map(c => [c.id, c])).values()
-        )
+        const deduped: SelectedCredential[] =
+          dedupeSelectedCredentials(selectedCredentials)
         setCertifications(prev => {
           const updated = [...prev]
-          // Build credentialLink as a JSON stringified array
-          const credLinks = deduped
-            .map(cred =>
-              cred.fileId && cred.vc ? `${cred.fileId},${JSON.stringify(cred.vc)}` : ''
-            )
-            .filter(Boolean)
+          const credLinksString = buildCredentialLinks(deduped)
           updated[activeSectionIndex] = {
             ...updated[activeSectionIndex],
             verificationStatus: 'verified',
-            credentialLink: credLinks.length ? JSON.stringify(credLinks) : '',
+            credentialLink: credLinksString,
             selectedCredentials: deduped
           }
           dispatch(
@@ -355,17 +367,12 @@ export default function CertificationsAndLicenses({
         const updated = [...prev]
         const cert = { ...updated[certIndex] }
         const newCreds = cert.selectedCredentials.filter((_, i) => i !== credIndex)
-        // Deduplicate by id
-        cert.selectedCredentials = Array.from(
-          new Map(newCreds.map(c => [c.id, c])).values()
-        )
+        cert.selectedCredentials = dedupeSelectedCredentials(newCreds)
         if (!cert.selectedCredentials.length) {
           cert.verificationStatus = 'unverified'
           cert.credentialLink = ''
         } else {
-          cert.credentialLink = cert.selectedCredentials[0]?.vc
-            ? JSON.stringify(cert.selectedCredentials[0].vc)
-            : ''
+          cert.credentialLink = buildCredentialLinks(cert.selectedCredentials)
         }
         updated[certIndex] = cert
         dispatch(
@@ -384,23 +391,6 @@ export default function CertificationsAndLicenses({
     if (onRemoveFile) {
       onRemoveFile('certifications', itemIndex, fileIndex)
     }
-  }
-
-  // Helper to get credential name (restore previous working logic)
-  function getCredentialName(claim: any): string {
-    if (!claim) return ''
-    if (claim.name) return claim.name
-    if (
-      claim.credentialSubject &&
-      claim.credentialSubject.achievement &&
-      claim.credentialSubject.achievement[0]?.name
-    ) {
-      return claim.credentialSubject.achievement[0].name
-    }
-    if (claim.credentialSubject && claim.credentialSubject.credentialName) {
-      return claim.credentialSubject.credentialName
-    }
-    return ''
   }
 
   return (
@@ -425,46 +415,20 @@ export default function CertificationsAndLicenses({
               gap: 2
             }}
           >
-            <Box
-              display='flex'
-              alignItems='center'
-              justifyContent='space-between'
-              onClick={() => toggleExpanded(index)}
-              sx={{ cursor: 'pointer' }}
-            >
-              <Box display='flex' alignItems='center' gap={2} flexGrow={1}>
-                <SVGSectionIcon />
-                {!expandedItems[index] ? (
-                  <>
-                    <Typography variant='body1'>Certification:</Typography>
-                    <Typography variant='body1' sx={{ fontWeight: 'medium' }}>
-                      {certification.name || 'Untitled Certification'}
-                    </Typography>
-                    {certification.verificationStatus === 'verified' && (
-                      <Tooltip title='Verified credential'>
-                        <VerifiedIcon sx={{ color: '#34C759', fontSize: 18 }} />
-                      </Tooltip>
-                    )}
-                  </>
-                ) : (
-                  <Box display='flex' alignItems='center'>
-                    <Typography variant='body1'>Certification Details</Typography>
-                  </Box>
-                )}
-              </Box>
-              <IconButton
-                onClick={e => {
-                  e.stopPropagation()
-                  toggleExpanded(index)
-                }}
-                sx={{
-                  transform: expandedItems[index] ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.3s ease'
-                }}
-              >
-                <SVGDownIcon />
-              </IconButton>
-            </Box>
+            <SectionHeader
+              title='Certification'
+              subtitle={certification.name || 'Untitled Certification'}
+              expanded={!!expandedItems[index]}
+              onToggle={() => toggleExpanded(index)}
+              icon={<SVGSectionIcon />}
+              actions={
+                certification.verificationStatus === 'verified' ? (
+                  <Tooltip title='Verified credential'>
+                    <VerifiedIcon sx={{ color: '#34C759', fontSize: 18 }} />
+                  </Tooltip>
+                ) : undefined
+              }
+            />
 
             {expandedItems[index] && (
               <>

@@ -8,25 +8,24 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import {
-  SVGSectionIcon,
-  SVGDownIcon,
-  SVGAddFiles,
-  SVGDeleteSection
-} from '../../../assets/svgs'
+import { SVGSectionIcon, SVGAddFiles, SVGDeleteSection } from '../../../assets/svgs'
 import TextEditor from '../../TextEditor/Texteditor'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import CredentialOverlay from '../../CredentialsOverlay'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
-import Dialog from '@mui/material/Dialog'
-import DialogContent from '@mui/material/DialogContent'
-import MinimalCredentialViewer from '../../MinimalCredentialViewer'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
+import {
+  dedupeSelectedCredentials,
+  buildCredentialLinks,
+  parseCredentialLink
+} from '../../../utils/resumeSections'
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
+import SectionHeader from '../../common/SectionHeader'
 
 interface ProjectsProps {
   onAddFiles?: (itemIndex?: number) => void
@@ -49,23 +48,6 @@ interface ProjectItem {
   selectedCredentials: SelectedCredential[]
 }
 
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  vc: any
-}
-
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
-}
-
 export default function Projects({
   onAddFiles,
   onDelete,
@@ -75,15 +57,15 @@ export default function Projects({
   allFiles = [],
   onRemoveFile
 }: Readonly<ProjectsProps>) {
-  const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const dispatch = useAppDispatch()
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
+  const vcs = useAppSelector(state => state.vc.vcs)
   // Remove credential dialog state and rendering from this section
 
   const [projects, setProjects] = useState<ProjectItem[]>([
@@ -128,17 +110,56 @@ export default function Projects({
         ? resume.projects.items
         : []
     if (items.length > 0) {
-      const typedItems = items.map((item: any) => ({
-        name: item.name || '',
-        description: item.description || '',
-        url: item.url || '',
-        id: item.id || '',
-        verificationStatus: item.verificationStatus || 'unverified',
-        credentialLink: item.credentialLink || '',
-        technologies: item.technologies || [],
-        selectedCredentials: item.selectedCredentials || [],
-        ...item
-      }))
+      const typedItems = items.map((item: any, idx: number) => {
+        let selectedCredentials: SelectedCredential[] = item.selectedCredentials || []
+        if (
+          (!selectedCredentials || selectedCredentials.length === 0) &&
+          item.credentialLink
+        ) {
+          try {
+            const credLinksArray = JSON.parse(item.credentialLink)
+            if (Array.isArray(credLinksArray)) {
+              const parsed = credLinksArray
+                .map((credLink: string) => parseCredentialLink(credLink))
+                .filter(Boolean) as {
+                credObj: any
+                credId: string
+                fileId: string
+              }[]
+              selectedCredentials = parsed.map(p => ({
+                id: p.fileId || p.credId,
+                url: '',
+                name:
+                  p.credObj?.credentialSubject?.achievement?.[0]?.name ||
+                  p.credObj?.credentialSubject?.credentialName ||
+                  'Credential',
+                vc: p.credObj,
+                fileId: p.fileId
+              }))
+              selectedCredentials = dedupeSelectedCredentials(selectedCredentials)
+            }
+          } catch (e) {
+            console.error(
+              'Error parsing credentialLink:',
+              e,
+              'for project item:',
+              item.id || idx
+            )
+          }
+        }
+
+        return {
+          name: item.name || '',
+          description: item.description || '',
+          url: item.url || '',
+          id: item.id || '',
+          verificationStatus: item.verificationStatus || 'unverified',
+          credentialLink: item.credentialLink || '',
+          technologies: item.technologies || [],
+          selectedCredentials,
+          ...item
+        }
+      })
 
       const shouldUpdate = initialLoadRef.current || typedItems.length !== projects.length
 
@@ -314,33 +335,15 @@ export default function Projects({
             vc: credential
           }
         })
-        // Deduplicate by id
-        const deduped: SelectedCredential[] = Array.from(
-          new Map(selectedCredentials.map(c => [c.id, c])).values()
-        )
+        const deduped: SelectedCredential[] =
+          dedupeSelectedCredentials(selectedCredentials)
         setProjects(prev => {
           const updated = [...prev]
-          // Build credentialLink as a JSON stringified array
-          const credLinks = deduped
-            .map(cred => {
-              let fileId = ''
-              if (
-                cred.vc?.originalItem?.id &&
-                !cred.vc.originalItem.id.startsWith('urn:')
-              ) {
-                fileId = cred.vc.originalItem.id
-              } else if (cred.vc?.id && !cred.vc.id.startsWith('urn:')) {
-                fileId = cred.vc.id
-              } else {
-                fileId = cred.id
-              }
-              return fileId && cred.vc ? `${fileId},${JSON.stringify(cred.vc)}` : ''
-            })
-            .filter(Boolean)
+          const credLinksString = buildCredentialLinks(deduped)
           updated[activeSectionIndex] = {
             ...updated[activeSectionIndex],
             verificationStatus: 'verified',
-            credentialLink: credLinks.length ? JSON.stringify(credLinks) : '',
+            credentialLink: credLinksString,
             selectedCredentials: deduped
           }
           dispatch(
@@ -364,17 +367,12 @@ export default function Projects({
         const updated = [...prev]
         const proj = { ...updated[projIndex] }
         const newCreds = proj.selectedCredentials.filter((_, i) => i !== credIndex)
-        // Deduplicate by id
-        proj.selectedCredentials = Array.from(
-          new Map(newCreds.map(c => [c.id, c])).values()
-        )
+        proj.selectedCredentials = dedupeSelectedCredentials(newCreds)
         if (!proj.selectedCredentials.length) {
           proj.verificationStatus = 'unverified'
           proj.credentialLink = ''
         } else {
-          proj.credentialLink = proj.selectedCredentials[0]?.vc
-            ? JSON.stringify(proj.selectedCredentials[0].vc)
-            : ''
+          proj.credentialLink = buildCredentialLinks(proj.selectedCredentials)
         }
         updated[projIndex] = proj
         dispatch(
@@ -392,7 +390,7 @@ export default function Projects({
   useEffect(() => {
     // Add event listener for opening credentials overlay
     const handleOpenCredentialsEvent = (event: CustomEvent) => {
-      const { sectionId, itemIndex, selectedText } = event.detail
+      const { sectionId, itemIndex } = event.detail
       if (sectionId === 'projects') {
         setActiveSectionIndex(itemIndex)
         setShowCredentialsOverlay(true)
@@ -420,37 +418,6 @@ export default function Projects({
     [onRemoveFile]
   )
 
-  // Helper to get credential name (copied verbatim from resumePreview)
-  function getCredentialName(claim: any): string {
-    try {
-      if (!claim || typeof claim !== 'object') {
-        return 'Invalid Credential'
-      }
-      const credentialSubject = claim.credentialSubject
-      if (!credentialSubject || typeof credentialSubject !== 'object') {
-        return 'Unknown Credential'
-      }
-      if (credentialSubject.employeeName) {
-        return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-      }
-      if (credentialSubject.volunteerWork) {
-        return `Volunteer: ${credentialSubject.volunteerWork}`
-      }
-      if (credentialSubject.role) {
-        return `Employment: ${credentialSubject.role}`
-      }
-      if (credentialSubject.credentialName) {
-        return credentialSubject.credentialName
-      }
-      if (credentialSubject.achievement && credentialSubject.achievement[0]?.name) {
-        return credentialSubject.achievement[0].name
-      }
-      return 'Credential'
-    } catch {
-      return 'Credential'
-    }
-  }
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {projects.map((project, index) => (
@@ -466,41 +433,13 @@ export default function Projects({
             gap: 2
           }}
         >
-          <Box
-            display='flex'
-            alignItems='center'
-            justifyContent='space-between'
-            onClick={() => toggleExpanded(index)}
-            sx={{ cursor: 'pointer' }}
-          >
-            <Box display='flex' alignItems='center' gap={2} flexGrow={1}>
-              <SVGSectionIcon />
-              {!expandedItems[index] ? (
-                <>
-                  <Typography variant='body1'>Project:</Typography>
-                  <Typography variant='body1' sx={{ fontWeight: 'medium' }}>
-                    {project.name || 'Untitled Project'}
-                  </Typography>
-                </>
-              ) : (
-                <Box display='flex' alignItems='center'>
-                  <Typography variant='body1'>Project Details</Typography>
-                </Box>
-              )}
-            </Box>
-            <IconButton
-              onClick={e => {
-                e.stopPropagation()
-                toggleExpanded(index)
-              }}
-              sx={{
-                transform: expandedItems[index] ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s ease'
-              }}
-            >
-              <SVGDownIcon />
-            </IconButton>
-          </Box>
+          <SectionHeader
+            title='Project'
+            subtitle={project.name || 'Untitled Project'}
+            expanded={!!expandedItems[index]}
+            onToggle={() => toggleExpanded(index)}
+            icon={<SVGSectionIcon />}
+          />
 
           {expandedItems[index] && (
             <>

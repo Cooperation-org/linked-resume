@@ -1,8 +1,9 @@
 import { Box, Typography, Button, useTheme, useMediaQuery } from '@mui/material'
 import ResumeCard from './ResumeCard'
 import { Link, useNavigate } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { RootState, AppDispatch } from '../redux/store'
+import { useAppSelector } from '../redux/hooks'
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { fetchUserResumes } from '../redux/slices/myresumes'
 import useDraftResume from '../hooks/useDraftResume'
@@ -31,10 +32,10 @@ const ResumeScreen: React.FC = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
-  const { signed, unsigned, status, error } = useSelector(
-    (state: RootState) => state.myresumes
+  const { signed, unsigned, status, error } = useAppSelector(
+    (state: RootState) => state.resumeLibrary
   )
-  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
+  const isAuthenticated = useAppSelector((state: RootState) => state.auth.isAuthenticated)
   const [friendlyError, setFriendlyError] = useState<string | null>(null)
   const hasFetchedResumes = useRef(false)
   // Get all drafts from localStorage but don't change the UI

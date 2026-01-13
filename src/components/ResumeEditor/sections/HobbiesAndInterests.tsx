@@ -12,10 +12,11 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { RootState } from '../../../redux/store'
 import { updateSection } from '../../../redux/slices/resume'
 import TextEditor from '../../TextEditor/Texteditor'
+import { useAppSelector } from '../../../redux/hooks'
 
 interface HobbiesAndInterestsProps {
   onAddFiles?: (itemIndex?: number) => void
@@ -33,7 +34,7 @@ export default function HobbiesAndInterests({
   evidence = []
 }: Readonly<HobbiesAndInterestsProps>) {
   const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const [hobbies, setHobbies] = useState<string[]>([])
   const [newHobby, setNewHobby] = useState('')
   const [newHobbyDescription, setNewHobbyDescription] = useState('')

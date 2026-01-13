@@ -26,11 +26,11 @@ import { getLocalStorage } from '../tools/cookie'
 import ResumePreview from '../components/resumePreview'
 import LaTeXResumePreview from '../components/LaTeXResumePreview'
 import ResumePreviewTopbar from '../components/ResumePreviewTopbar'
-import html2pdf from 'html2pdf.js'
 import { useLocation } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { setSelectedResume } from '../redux/slices/resume'
 import { AppDispatch, RootState } from '../redux/store'
+import { useAppSelector } from '../redux/hooks'
 import resumeToLatex from '../tools/resumeToLatex'
 import { HtmlGenerator, parse } from 'latex.js'
 import {
@@ -56,7 +56,7 @@ const PreviewPage = () => {
   const dispatch = useDispatch<AppDispatch>()
 
   // Get the resume from Redux state first
-  const reduxResume = useSelector((state: RootState) => state.resume?.resume)
+  const reduxResume = useAppSelector((state: RootState) => state.resumeEditor?.resume)
 
   // Get resumeId from URL parameters
   const queryParams = new URLSearchParams(location.search)
@@ -174,6 +174,7 @@ const PreviewPage = () => {
     const prevZoom = zoom
     setZoom(1)
     try {
+      const html2pdf = (await import('html2pdf.js')).default
       await html2pdf().set(metadata).from(element).set(options).save()
     } finally {
       setZoom(prevZoom)
@@ -215,6 +216,7 @@ const PreviewPage = () => {
       document.body.appendChild(tempContainer)
 
       const baseName = (resumeData?.contact?.fullName || 'Resume').replace(/\s+/g, '_')
+      const html2pdf = (await import('html2pdf.js')).default
       const worker = html2pdf().set({
         margin: [10, 10, 10, 10],
         filename: `${baseName}_LaTeX.pdf`,

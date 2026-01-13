@@ -1,11 +1,11 @@
 import { useCallback } from 'react'
-import { useSelector } from 'react-redux'
 import { RootState } from '../redux/store'
+import { useAppSelector } from '../redux/hooks'
 
 const DRAFT_PREFIX = 'resume_draft_'
 
 export const useDraftResume = (resumeId?: string | null) => {
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
 
   // Key for localStorage based on resumeId
   const draftKey = resumeId ? `${DRAFT_PREFIX}${resumeId}` : null

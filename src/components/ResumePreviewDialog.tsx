@@ -13,7 +13,6 @@ import { getLocalStorage } from '../tools/cookie'
 import ResumePreview from './resumePreview'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import CloseIcon from '@mui/icons-material/Close'
-import html2pdf from 'html2pdf.js'
 
 type RawCredentialData = {
   content?: {
@@ -61,7 +60,7 @@ const ResumePreviewDialog: React.FC<ResumePreviewDialogProps> = ({
     [safeGet]
   )
 
-  const exportResumeToPDF = (data: any) => {
+  const exportResumeToPDF = async (data: any) => {
     const element = document.getElementById('resume-preview')
     if (!element) return
 
@@ -81,6 +80,7 @@ const ResumePreviewDialog: React.FC<ResumePreviewDialogProps> = ({
       custom: { resumeData: JSON.stringify(data) }
     }
 
+    const html2pdf = (await import('html2pdf.js')).default
     html2pdf().set(metadata).from(element).set(options).save()
   }
 

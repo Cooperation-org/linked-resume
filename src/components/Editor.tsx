@@ -26,17 +26,13 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import LeftSidebar from './ResumeEditor/LeftSidebar'
 import RightSidebar from './ResumeEditor/RightSidebar'
 import Section from './ResumeEditor/Section'
-import { useSelector, useDispatch } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { RootState, AppDispatch } from '../redux/store'
+import { useAppSelector } from '../redux/hooks'
 import { SVGEditName } from '../assets/svgs'
 import useGoogleDrive from '../hooks/useGoogleDrive' // , { DriveFileMeta }
 import { useNavigate, useLocation } from 'react-router-dom'
-import {
-  updateSection,
-  setSelectedResume,
-  setActiveSection,
-  resetToInitialState
-} from '../redux/slices/resume'
+import { updateSection, setSelectedResume, setActiveSection } from '../redux/slices/resume'
 import OptionalSectionsManager from './ResumeEditor/OptionalSectionCard'
 import { storeFileTokens } from '../firebase/storage'
 import { getLocalStorage } from '../tools/cookie'
@@ -44,6 +40,8 @@ import { prepareResumeForVC } from '../tools/resumeAdapter'
 import FileSelectorOverlay from './NewFileUpload/FileSelectorOverlay'
 import { FileItem } from './NewFileUpload/FileList'
 import { fetchUserResumes } from '../redux/slices/myresumes'
+import { computeResumeHash } from '../utils/resumeHash'
+import { useResumeLifecycle } from '../hooks/useResumeLifecycle'
 
 const COLORS = {
   primary: '#3A35A2',
@@ -78,24 +76,6 @@ const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
     })
   }
 }))
-
-// Helper function to compute a simple hash from the resume's critical fields
-const computeResumeHash = (resume: any): string => {
-  if (!resume) return ''
-
-  // Extract fields that we want to monitor for changes
-  const fieldsToCheck = {
-    name: resume.name ?? '',
-    contact: resume.contact ?? {},
-    summary: resume.summary ?? '',
-    experience: resume.experience ?? {},
-    education: resume.education ?? {},
-    affiliations: resume.affiliations ?? {},
-    skills: resume.skills ?? {}
-  }
-
-  return JSON.stringify(fieldsToCheck)
-}
 
 // FINAL PATCH: Guarantee credentialLink is a JSON string if fullCredential is present in the signed object (all sections)
 function forceCredentialJsonString(sectionArr: any[]): any[] {
@@ -183,10 +163,12 @@ const ResumeEditor: React.FC = () => {
   const queryParams = new URLSearchParams(location.search)
   const resumeId = queryParams.get('id')
 
-  const activeSection = useSelector((state: RootState) => state.resume.activeSection)
-  const resume = useSelector((state: RootState) => state?.resume.resume)
+  const activeSection = useAppSelector(
+    (state: RootState) => state.resumeEditor.activeSection
+  )
+  const resume = useAppSelector((state: RootState) => state?.resumeEditor.resume)
   const { instances, isInitialized } = useGoogleDrive()
-  const { accessToken } = useSelector((state: RootState) => state.auth)
+  const { accessToken } = useAppSelector((state: RootState) => state.auth)
   const refreshToken = getLocalStorage('refresh_token')
 
   // Memoize the resume hash computation
@@ -210,115 +192,19 @@ const ResumeEditor: React.FC = () => {
   const closeLeftDrawer = useCallback(() => setIsLeftDrawerOpen(false), [])
   const closeRightDrawer = useCallback(() => setIsRightDrawerOpen(false), [])
 
-  // Handle creating a new resume (clear form data)
-  useEffect(() => {
-    if (!resumeId && isInitialized) {
-      // Reset the entire Redux state to initial state
-      dispatch(resetToInitialState())
-      sessionStorage.removeItem('lastEditedResumeId')
-
-      // Clear any localStorage drafts that might interfere
-      const keys = Object.keys(localStorage)
-      const draftKeys = keys.filter(key => key.startsWith('resume_draft_'))
-      draftKeys.forEach(key => {
-        localStorage.removeItem(key)
-      })
-
-      originalResumeRef.current = null
-      setIsDirty(false)
-      setResumeName('Untitled')
-    }
-  }, [resumeId, isInitialized, dispatch])
-
-  // Load resume data from Google Drive
-  useEffect(() => {
-    if (resumeId && isInitialized) {
-      const fetchResumeData = async () => {
-        setIsLoading(true)
-
-        try {
-          // Check if this is a temporary import (starts with "temp-")
-          if (resumeId.startsWith('temp-')) {
-            // Load from localStorage instead of Google Drive
-            const draftKey = `resume_draft_${resumeId}`
-            const savedDraft = localStorage.getItem(draftKey)
-
-            if (savedDraft) {
-              const resumeData = JSON.parse(savedDraft)
-
-              // Dispatch to Redux
-              dispatch(setSelectedResume(resumeData))
-
-              // Store the original resume hash for dirty state comparison
-              originalResumeRef.current = computeResumeHash(resumeData)
-
-              // Try to set resume name if we can find it
-              try {
-                const name =
-                  resumeData.contact?.fullName ?? resumeData.name ?? 'Imported Resume'
-                setResumeName(name)
-              } catch (e) {
-                setResumeName('Imported Resume')
-              }
-
-              console.log(
-                'Resume loaded successfully from localStorage (temporary import)'
-              )
-            } else {
-              console.error('Temporary resume data not found in localStorage')
-              // Redirect back to upload page if data is missing
-              navigate('/resume/upload')
-            }
-          } else {
-            // Load from Google Drive as usual
-            const fileData = await instances.storage?.retrieve(resumeId)
-
-            if (fileData) {
-              const resumeData = fileData.data ?? fileData
-
-              // Dispatch to Redux
-              dispatch(setSelectedResume(resumeData))
-
-              // Store the original resume hash for dirty state comparison
-              originalResumeRef.current = computeResumeHash(resumeData)
-
-              // Try to set resume name if we can find it
-              try {
-                const name =
-                  resumeData.contact?.fullName ?? resumeData.name ?? 'Untitled Resume'
-                setResumeName(name)
-              } catch (e) {
-                setResumeName('Untitled Resume')
-              }
-            } else {
-              console.error('Retrieved resume data is empty')
-            }
-          }
-        } catch (error) {
-          console.error('Error retrieving resume data:', error)
-        } finally {
-          setIsLoading(false)
-        }
-      }
-
-      fetchResumeData()
-    }
-  }, [resumeId, isInitialized, dispatch, instances.storage, navigate])
-
-  // Check if resume has been modified using the optimized hash comparison
-  useEffect(() => {
-    if (resume && originalResumeRef.current) {
-      const newDirtyState = currentResumeHash !== originalResumeRef.current
-      // Only update if state actually changes to prevent unnecessary re-renders
-      setIsDirty(prev => {
-        if (prev !== newDirtyState) {
-          return newDirtyState
-        }
-        return prev
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentResumeHash]) // NEVER include resume here - it causes infinite loops!
+  useResumeLifecycle({
+    resumeId,
+    isInitialized,
+    storage: instances.storage,
+    dispatch,
+    navigate,
+    setResumeName,
+    setIsDirty,
+    setIsLoading,
+    originalResumeRef,
+    resume,
+    currentResumeHash
+  })
 
   // Handle browser's built-in beforeunload dialog for page reloads
   useEffect(() => {

@@ -11,7 +11,7 @@ import {
 } from '@mui/material'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import { useSelector } from 'react-redux'
+import { useAppSelector } from '../redux/hooks'
 import { RootState } from '../redux/store'
 import resumeToLatex from '../tools/resumeToLatex'
 import { HtmlGenerator, parse } from 'latex.js'
@@ -25,7 +25,9 @@ interface LaTeXResumePreviewProps {
 }
 
 const LaTeXResumePreview: React.FC<LaTeXResumePreviewProps> = ({ data }) => {
-  const resumeFromStore = useSelector((state: RootState) => state.resume.resume)
+  const resumeFromStore = useAppSelector(
+    (state: RootState) => state.resumeEditor.resume
+  )
   const resume = data ?? resumeFromStore
   const latexSource = useMemo(() => (resume ? resumeToLatex(resume) : ''), [resume])
   const [compiledHtml, setCompiledHtml] = useState('')

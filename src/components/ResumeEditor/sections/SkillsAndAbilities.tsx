@@ -10,24 +10,15 @@ import {
 import TextEditor from '../../TextEditor/Texteditor'
 import { SVGDownIcon, SVGAddFiles, SVGDeleteSection } from '../../../assets/svgs'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import CredentialOverlay from '../../CredentialsOverlay'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
-
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
-}
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
 
 interface SkillsAndAbilitiesProps {
   onAddFiles?: (itemIndex?: number) => void
@@ -45,13 +36,6 @@ interface SkillItem {
   verificationStatus: string
   credentialLink: string
   selectedCredentials: SelectedCredential[]
-}
-
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  vc: any
 }
 
 // Helper to get credential name (robust, checks all possible locations)
@@ -91,15 +75,15 @@ export default function SkillsAndAbilities({
   allFiles,
   onRemoveFile
 }: Readonly<SkillsAndAbilitiesProps>) {
-  const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const dispatch = useAppDispatch()
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
+  const vcs = useAppSelector(state => state.vc.vcs)
 
   const [skills, setSkills] = useState<SkillItem[]>([
     {
@@ -357,7 +341,7 @@ export default function SkillsAndAbilities({
   useEffect(() => {
     // Add event listener for opening credentials overlay
     const handleOpenCredentialsEvent = (event: CustomEvent) => {
-      const { sectionId, itemIndex, selectedText } = event.detail
+      const { sectionId, itemIndex } = event.detail
       if (sectionId === 'skills') {
         setActiveSectionIndex(itemIndex)
         setShowCredentialsOverlay(true)

@@ -10,28 +10,28 @@ import {
   FormControlLabel,
   Button,
   IconButton,
-  Dialog,
-  DialogContent,
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import {
-  SVGSectionIcon,
-  SVGDownIcon,
-  SVGAddFiles,
-  SVGDeleteSection
-} from '../../../assets/svgs'
+import { SVGSectionIcon, SVGAddFiles, SVGDeleteSection } from '../../../assets/svgs'
 import TextEditor from '../../TextEditor/Texteditor'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import CredentialOverlay from '../../CredentialsOverlay'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
-import MinimalCredentialViewer from '../../MinimalCredentialViewer'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
+import {
+  calculateDuration,
+  dedupeSelectedCredentials,
+  buildCredentialLinks,
+  parseCredentialLink
+} from '../../../utils/resumeSections'
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
+import SectionHeader from '../../common/SectionHeader'
 
 const PinkSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
@@ -45,16 +45,6 @@ const PinkSwitch = styled(Switch)(({ theme }) => ({
   }
 }))
 
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
-}
-
 interface VolunteerWorkProps {
   onAddFiles?: (itemIndex?: number) => void
   onDelete?: () => void
@@ -63,13 +53,6 @@ interface VolunteerWorkProps {
   evidence?: string[][]
   allFiles?: FileItem[]
   onRemoveFile?: (sectionId: string, itemIndex: number, fileIndex: number) => void
-}
-
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  vc: any
 }
 
 interface VolunteerWorkItem {
@@ -96,17 +79,15 @@ export default function VolunteerWork({
   allFiles = [],
   onRemoveFile
 }: Readonly<VolunteerWorkProps>) {
-  const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const dispatch = useAppDispatch()
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
-  const [openCredDialog, setOpenCredDialog] = useState(false)
-  const [dialogCredObj, setDialogCredObj] = useState<any>(null)
+  const vcs = useAppSelector(state => state.vc.vcs)
 
   const [volunteerWorks, setVolunteerWorks] = useState<VolunteerWorkItem[]>([
     {
@@ -131,33 +112,11 @@ export default function VolunteerWork({
 
   const [useDuration, setUseDuration] = useState<boolean[]>([false])
 
-  const calculateDuration = (
-    startDate: string,
-    endDate: string | undefined,
-    currentlyVolunteering: boolean
-  ): string => {
-    if (!startDate) return ''
-    const endDateObj = currentlyVolunteering || !endDate ? new Date() : new Date(endDate)
-    const startDateObj = new Date(startDate)
-    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-      return ''
-    }
-    let years = endDateObj.getFullYear() - startDateObj.getFullYear()
-    let months = endDateObj.getMonth() - startDateObj.getMonth()
-    if (months < 0) {
-      years--
-      months += 12
-    }
-    let durationString = ''
-    if (years > 0) {
-      durationString += `${years} year${years !== 1 ? 's' : ''}`
-    }
-    if (months > 0 || years === 0) {
-      if (durationString) durationString += ' '
-      durationString += `${months} month${months !== 1 ? 's' : ''}`
-    }
-    return durationString || 'Less than a month'
-  }
+  const calculateDurationMemo = useCallback(
+    (startDate: string, endDate: string | undefined, currentlyVolunteering: boolean) =>
+      calculateDuration(startDate, endDate, currentlyVolunteering),
+    []
+  )
 
   const debouncedReduxUpdate = useCallback(
     (items: VolunteerWorkItem[]) => {
@@ -184,7 +143,7 @@ export default function VolunteerWork({
     volunteerWorks.forEach((volunteer, index) => {
       if (useDuration[index]) {
         if (volunteer.startDate) {
-          const calc = calculateDuration(
+          const calc = calculateDurationMemo(
             volunteer.startDate,
             volunteer.endDate,
             volunteer.currentlyVolunteering
@@ -214,7 +173,7 @@ export default function VolunteerWork({
         }
       }
     })
-  }, [dateChangeString, dispatch, volunteerWorks, useDuration])
+  }, [dateChangeString, dispatch, volunteerWorks, useDuration, calculateDurationMemo])
 
   useEffect(() => {
     const items =
@@ -222,20 +181,59 @@ export default function VolunteerWork({
         ? resume.volunteerWork.items
         : []
     if (items.length > 0) {
-      const typed = items.map((item: any) => ({
-        role: item.role || '',
-        organization: item.organization || '',
-        location: item.location || '',
-        startDate: item.startDate || '',
-        endDate: item.endDate || '',
-        currentlyVolunteering: !!item.currentlyVolunteering,
-        description: item.description || '',
-        duration: item.duration || '',
-        id: item.id || '',
-        verificationStatus: item.verificationStatus || 'unverified',
-        credentialLink: item.credentialLink || '',
-        selectedCredentials: item.selectedCredentials || []
-      })) as VolunteerWorkItem[]
+      const typed = items.map((item: any, idx: number) => {
+        let selectedCredentials: SelectedCredential[] = item.selectedCredentials || []
+        if (
+          (!selectedCredentials || selectedCredentials.length === 0) &&
+          item.credentialLink
+        ) {
+          try {
+            const credLinksArray = JSON.parse(item.credentialLink)
+            if (Array.isArray(credLinksArray)) {
+              const parsed = credLinksArray
+                .map((credLink: string) => parseCredentialLink(credLink))
+                .filter(Boolean) as {
+                credObj: any
+                credId: string
+                fileId: string
+              }[]
+              selectedCredentials = parsed.map(p => ({
+                id: p.fileId || p.credId,
+                url: '',
+                name:
+                  p.credObj?.credentialSubject?.achievement?.[0]?.name ||
+                  p.credObj?.credentialSubject?.credentialName ||
+                  'Credential',
+                vc: p.credObj,
+                fileId: p.fileId
+              }))
+              selectedCredentials = dedupeSelectedCredentials(selectedCredentials)
+            }
+          } catch (e) {
+            console.error(
+              'Error parsing credentialLink:',
+              e,
+              'for volunteer item:',
+              item.id || idx
+            )
+          }
+        }
+
+        return {
+          role: item.role || '',
+          organization: item.organization || '',
+          location: item.location || '',
+          startDate: item.startDate || '',
+          endDate: item.endDate || '',
+          currentlyVolunteering: !!item.currentlyVolunteering,
+          description: item.description || '',
+          duration: item.duration || '',
+          id: item.id || '',
+          verificationStatus: item.verificationStatus || 'unverified',
+          credentialLink: item.credentialLink || '',
+          selectedCredentials
+        }
+      }) as VolunteerWorkItem[]
 
       const needUpdate = initialLoadRef.current || typed.length !== volunteerWorks.length
       if (needUpdate) {
@@ -271,7 +269,7 @@ export default function VolunteerWork({
         if (!useDuration[index]) {
           item.duration = ''
         } else if (field === 'startDate' || field === 'endDate') {
-          item.duration = calculateDuration(
+          item.duration = calculateDurationMemo(
             item.startDate,
             item.endDate,
             item.currentlyVolunteering
@@ -284,7 +282,7 @@ export default function VolunteerWork({
         return updated
       })
     },
-    [debouncedReduxUpdate, useDuration]
+    [debouncedReduxUpdate, useDuration, calculateDurationMemo]
   )
 
   const handleDescriptionChange = useCallback(
@@ -400,33 +398,15 @@ export default function VolunteerWork({
             vc: credential
           }
         })
-        // Deduplicate by id
-        const deduped: SelectedCredential[] = Array.from(
-          new Map(selectedCredentials.map(c => [c.id, c])).values()
-        )
+        const deduped: SelectedCredential[] =
+          dedupeSelectedCredentials(selectedCredentials)
         setVolunteerWorks(prev => {
           const updated = [...prev]
-          // Build credentialLink as a JSON stringified array
-          const credLinks = deduped
-            .map(cred => {
-              let fileId = ''
-              if (
-                cred.vc?.originalItem?.id &&
-                !cred.vc.originalItem.id.startsWith('urn:')
-              ) {
-                fileId = cred.vc.originalItem.id
-              } else if (cred.vc?.id && !cred.vc.id.startsWith('urn:')) {
-                fileId = cred.vc.id
-              } else {
-                fileId = cred.id
-              }
-              return fileId && cred.vc ? `${fileId},${JSON.stringify(cred.vc)}` : ''
-            })
-            .filter(Boolean)
+          const credLinksString = buildCredentialLinks(deduped)
           updated[activeSectionIndex] = {
             ...updated[activeSectionIndex],
             verificationStatus: 'verified',
-            credentialLink: credLinks.length ? JSON.stringify(credLinks) : '',
+            credentialLink: credLinksString,
             selectedCredentials: deduped
           }
           dispatch(
@@ -450,17 +430,12 @@ export default function VolunteerWork({
         const updated = [...prev]
         const vol = { ...updated[volIndex] }
         const newCreds = vol.selectedCredentials.filter((_, i) => i !== credIndex)
-        // Deduplicate by id
-        vol.selectedCredentials = Array.from(
-          new Map(newCreds.map(c => [c.id, c])).values()
-        )
+        vol.selectedCredentials = dedupeSelectedCredentials(newCreds)
         if (!vol.selectedCredentials.length) {
           vol.verificationStatus = 'unverified'
           vol.credentialLink = ''
         } else {
-          vol.credentialLink = vol.selectedCredentials[0]?.vc
-            ? JSON.stringify(vol.selectedCredentials[0].vc)
-            : ''
+          vol.credentialLink = buildCredentialLinks(vol.selectedCredentials)
         }
         updated[volIndex] = vol
         dispatch(
@@ -478,7 +453,7 @@ export default function VolunteerWork({
   useEffect(() => {
     // Add event listener for opening credentials overlay
     const handleOpenCredentialsEvent = (event: CustomEvent) => {
-      const { sectionId, itemIndex, selectedText } = event.detail
+      const { sectionId, itemIndex } = event.detail
       if (sectionId === 'volunteerWork') {
         setActiveSectionIndex(itemIndex)
         setShowCredentialsOverlay(true)
@@ -524,41 +499,13 @@ export default function VolunteerWork({
             gap: 2
           }}
         >
-          <Box
-            display='flex'
-            alignItems='center'
-            justifyContent='space-between'
-            onClick={() => toggleExpanded(index)}
-            sx={{ cursor: 'pointer' }}
-          >
-            <Box display='flex' alignItems='center' gap={2} flexGrow={1}>
-              <SVGSectionIcon />
-              {!expandedItems[index] ? (
-                <>
-                  <Typography variant='body1'>Role:</Typography>
-                  <Typography variant='body1' sx={{ fontWeight: 'medium' }}>
-                    {volunteer.role || 'Untitled Role'}
-                  </Typography>
-                </>
-              ) : (
-                <Box display='flex' alignItems='center'>
-                  <Typography variant='body1'>Volunteer Details</Typography>
-                </Box>
-              )}
-            </Box>
-            <IconButton
-              onClick={e => {
-                e.stopPropagation()
-                toggleExpanded(index)
-              }}
-              sx={{
-                transform: expandedItems[index] ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s ease'
-              }}
-            >
-              <SVGDownIcon />
-            </IconButton>
-          </Box>
+          <SectionHeader
+            title='Volunteer'
+            subtitle={volunteer.role || 'Untitled Role'}
+            expanded={!!expandedItems[index]}
+            onToggle={() => toggleExpanded(index)}
+            icon={<SVGSectionIcon />}
+          />
 
           {expandedItems[index] && (
             <>
@@ -902,35 +849,4 @@ export default function VolunteerWork({
       )}
     </Box>
   )
-}
-
-// Helper to get credential name (copied verbatim from resumePreview)
-function getCredentialName(claim: any): string {
-  try {
-    if (!claim || typeof claim !== 'object') {
-      return 'Invalid Credential'
-    }
-    const credentialSubject = claim.credentialSubject
-    if (!credentialSubject || typeof credentialSubject !== 'object') {
-      return 'Unknown Credential'
-    }
-    if (credentialSubject.employeeName) {
-      return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-    }
-    if (credentialSubject.volunteerWork) {
-      return `Volunteer: ${credentialSubject.volunteerWork}`
-    }
-    if (credentialSubject.role) {
-      return `Employment: ${credentialSubject.role}`
-    }
-    if (credentialSubject.credentialName) {
-      return credentialSubject.credentialName
-    }
-    if (credentialSubject.achievement && credentialSubject.achievement[0]?.name) {
-      return credentialSubject.achievement[0].name
-    }
-    return 'Credential'
-  } catch {
-    return 'Credential'
-  }
 }

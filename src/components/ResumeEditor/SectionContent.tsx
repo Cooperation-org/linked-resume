@@ -1,20 +1,16 @@
+'use client'
 import React, { useState, useEffect } from 'react'
-import {
-  Box,
-  Button,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton
-} from '@mui/material'
-import { Trash2, Plus } from 'lucide-react'
-import { useDispatch, useSelector } from 'react-redux'
+import { Box, Button, Typography } from '@mui/material'
+import { Plus } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { updateSection } from '../../redux/slices/resume'
 import CredentialDialog from '../CredentialDialog'
 import { SVGSectionIcon } from '../../assets/svgs'
 import SectionDetails from './SectionDetails'
 import TextEditor from '../TextEditor/Texteditor'
+import { SectionListItem } from '../../types/resumeSections'
+import SectionContainer from '../common/SectionContainer'
+import SectionList from '../common/SectionList'
 
 interface SectionContentProps {
   sectionId: keyof Resume
@@ -28,16 +24,23 @@ type CredentialItem = {
 }
 
 const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
-  const dispatch = useDispatch()
-  const { vcs: claims } = useSelector((state: any) => state.vcReducer)
-  const resume = useSelector((state: any) => state.resume.resume)
-  const sectionData = resume[sectionId]
+  const dispatch = useAppDispatch()
+  const { vcs: claims } = useAppSelector(state => state.vc)
+  const resume = useAppSelector(state => state.resumeEditor.resume)
+
+  const sectionData = (resume?.[sectionId] as any) ?? ''
+  const hasItems =
+    typeof sectionData === 'object' && sectionData !== null && 'items' in sectionData
 
   const isStringBased = typeof sectionData === 'string'
-  const isListBased = Array.isArray(sectionData?.items)
+  const isListBased = hasItems
 
-  const [content, setContent] = useState(sectionData || '')
-  const [items, setItems] = useState<any[]>(sectionData?.items || [])
+  const [content, setContent] = useState<string>(
+    isStringBased ? (sectionData as string) : ''
+  )
+  const [items, setItems] = useState<SectionListItem[]>(
+    isListBased ? (sectionData.items as SectionListItem[]) || [] : []
+  )
   const [editing, setEditing] = useState(false)
   const [newItemValue, setNewItemValue] = useState('')
   const [isVisible, setIsVisible] = useState(true)
@@ -47,7 +50,7 @@ const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
     if (isListBased) {
       setItems(sectionData.items || [])
     } else {
-      setContent(sectionData || '')
+      setContent((sectionData as string) || '')
     }
   }, [sectionData, isListBased])
   //eslint-disable-next-line
@@ -106,56 +109,10 @@ const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
     dispatch(updateSection({ sectionId, content: { items: updatedItems } }))
   }
 
-  const renderListItem = (item: any, index: number) => {
-    const itemText = typeof item === 'string' ? item : item.text
-    const isCredential = typeof item === 'object'
-
-    return (
-      <ListItem
-        key={isCredential ? item.credentialId : index}
-        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-      >
-        <ListItemText
-          primary={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {editing ? (
-                <TextEditor
-                  value={itemText}
-                  onChange={val => handleUpdateItem(index, val)}
-                />
-              ) : (
-                <>
-                  <Typography>{itemText}</Typography>
-                  {isCredential && (
-                    // we can remove it or use it as openCreds
-                    <Typography
-                      component='span'
-                      sx={{
-                        bgcolor: 'success.main',
-                        color: 'white',
-                        px: 1,
-                        py: 0.5,
-                        borderRadius: 1,
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      Verified
-                    </Typography>
-                  )}
-                </>
-              )}
-            </Box>
-          }
-        />
-        <IconButton onClick={() => handleRemoveItem(index)}>
-          <Trash2 size={16} />
-        </IconButton>
-      </ListItem>
-    )
-  }
+  if (!resume) return null
 
   return (
-    <Box sx={{ position: 'relative' }}>
+    <SectionContainer>
       {/* Section Header */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', p: '15px 0 20px 10px' }}>
         <SVGSectionIcon />
@@ -171,7 +128,7 @@ const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
           {isStringBased ? (
             <Box>
               {editing ? (
-                <TextEditor value={content} onChange={val => setContent(val)} />
+                <TextEditor value={content} onChange={val => setContent(val || '')} />
               ) : (
                 <Typography variant='body1'>
                   {content || `No ${sectionId} added yet.`}
@@ -181,7 +138,12 @@ const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
           ) : (
             <Box>
               {items && (
-                <List>{items.map((item, index) => renderListItem(item, index))}</List>
+                <SectionList
+                  items={items}
+                  editing={editing}
+                  onChangeItem={handleUpdateItem}
+                  onRemoveItem={handleRemoveItem}
+                />
               )}
 
               {editing && (
@@ -212,7 +174,7 @@ const SectionContent: React.FC<SectionContentProps> = ({ sectionId }) => {
         sectionId={sectionId}
         onCredentialsSelected={handleCredentialsSelected}
       />
-    </Box>
+    </SectionContainer>
   )
 }
 

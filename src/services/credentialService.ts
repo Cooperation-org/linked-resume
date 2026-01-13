@@ -45,7 +45,7 @@ export const replaceCredentialLinksWithContent = async (
       // Import here to avoid circular dependency
       const { store } = await import('../redux/store')
       const state = store.getState()
-      vcs = state.vcReducer.vcs || []
+      vcs = state.vc.vcs || []
     } catch (error) {
       console.warn('Could not get VCs from Redux store:', error)
       vcs = []

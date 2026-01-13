@@ -1,5 +1,6 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from './config/firebase'
+import { refreshGoogleToken } from '../services/apiClient'
 
 interface FileTokens {
   accessToken: string
@@ -82,52 +83,20 @@ export const getAccessToken = async (fileId: string) => {
 
     const isExpired = data.expiresAt <= Date.now()
     if (isExpired) {
-      const refreshedToken = await refreshAccessToken({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        expiresAt: data.expiresAt,
-        googleFileId: fileId
+      if (!data.refreshToken) {
+        throw new Error(`Missing refresh token for file ${fileId}`)
+      }
+      const refreshedToken = await refreshGoogleToken(data.refreshToken)
+      await updateFileAccessToken({
+        googleFileId: fileId,
+        accessToken: refreshedToken
       })
-
-      return refreshedToken.accessToken
+      return refreshedToken
     }
 
     return data.accessToken
   } catch (error) {
     console.error(`Error retrieving tokens for file ${fileId}:`, error)
-    throw error
-  }
-}
-
-const client_id = process.env.REACT_APP_GOOGLE_CLIENT_ID || ''
-const client_secret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET || ''
-const refreshAccessToken = async (tokens: any) => {
-  try {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        client_id,
-        client_secret,
-        refresh_token: tokens.refreshToken,
-        grant_type: 'refresh_token'
-      })
-    })
-
-    const data = await response.json()
-    const newAccessToken = data.access_token
-
-    // Update the access token in Firestore
-    await updateFileAccessToken({
-      googleFileId: tokens.googleFileId,
-      accessToken: newAccessToken
-    })
-
-    return { ...tokens, accessToken: newAccessToken, expiresAt: Date.now() + 3600 * 1000 }
-  } catch (error) {
-    console.error('Error refreshing access token:', error)
     throw error
   }
 }
@@ -220,27 +189,11 @@ export const getAccessTokenForFile = async ({
     }
 
     // Refresh the access token
-
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID || '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
-        refresh_token: tokens.refreshToken,
-        grant_type: 'refresh_token'
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to refresh access token')
+    if (!tokens.refreshToken) {
+      throw new Error(`No refresh token available for file: ${googleFileId}`)
     }
 
-    const data = await response.json()
-    const newAccessToken = data.accessToken
-    // Update the access token in Firestore
+    const newAccessToken = await refreshGoogleToken(tokens.refreshToken)
     await updateFileAccessToken({
       googleFileId,
       accessToken: newAccessToken

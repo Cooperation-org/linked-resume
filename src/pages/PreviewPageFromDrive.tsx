@@ -18,7 +18,6 @@ import { GoogleDriveStorage } from '@cooperation/vc-storage'
 import { getLocalStorage } from '../tools/cookie'
 import ResumePreview from '../components/resumePreview'
 import LaTeXResumePreview from '../components/LaTeXResumePreview'
-import html2pdf from 'html2pdf.js'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
@@ -118,6 +117,7 @@ const PreviewPageFromDrive: React.FC = () => {
     }
 
     try {
+      const html2pdf = (await import('html2pdf.js')).default
       await html2pdf().set(metadata).from(element).set(options).save()
     } finally {
       setZoom(prevZoom)
@@ -201,6 +201,7 @@ const PreviewPageFromDrive: React.FC = () => {
       document.body.appendChild(tempContainer)
 
       const baseName = (resumeData?.contact?.fullName || 'Resume').replace(/\s+/g, '_')
+      const html2pdf = (await import('html2pdf.js')).default
       const worker = html2pdf().set({
         margin: [10, 10, 10, 10],
         filename: `${baseName}_LaTeX.pdf`,

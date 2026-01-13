@@ -1,16 +1,15 @@
 // redux/store.ts
 import { configureStore } from '@reduxjs/toolkit'
-import resumeReducer from './slices/resume'
-import vcSlice from './slices/vc'
-import resumesReducer from './slices/myresumes'
+import resumeEditorReducer from './slices/resume'
+import vcReducer from './slices/vc'
+import resumeLibraryReducer from './slices/myresumes'
 import authReducer from './slices/auth'
 
 export const store = configureStore({
   reducer: {
-    resume: resumeReducer,
-    vcReducer: vcSlice,
-    resumeReducer: resumeReducer,
-    myresumes: resumesReducer,
+    resumeEditor: resumeEditorReducer,
+    vc: vcReducer,
+    resumeLibrary: resumeLibraryReducer,
     auth: authReducer
   }
 })

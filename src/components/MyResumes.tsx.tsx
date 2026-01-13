@@ -1,7 +1,8 @@
 import { Box, Typography, Button, Paper } from '@mui/material'
 import ResumeCard from './ResumeCard'
-import { useSelector, useDispatch } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { RootState, AppDispatch } from '../redux/store'
+import { useAppSelector } from '../redux/hooks'
 import { useEffect } from 'react'
 import { fetchUserResumes } from '../redux/slices/myresumes'
 import { refreshAccessToken } from '../tools/auth'
@@ -9,8 +10,8 @@ import { getLocalStorage } from '../tools/cookie'
 
 const ResumeScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>()
-  const { signed, unsigned, status, error } = useSelector(
-    (state: RootState) => state.myresumes
+  const { signed, unsigned, status, error } = useAppSelector(
+    (state: RootState) => state.resumeLibrary
   )
 
   useEffect(() => {

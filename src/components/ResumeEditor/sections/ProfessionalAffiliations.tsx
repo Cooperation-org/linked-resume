@@ -10,28 +10,28 @@ import {
   alpha,
   Button,
   IconButton,
-  Dialog,
-  DialogContent,
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import {
-  SVGSectionIcon,
-  SVGDownIcon,
-  SVGAddFiles,
-  SVGDeleteSection
-} from '../../../assets/svgs'
+import { SVGSectionIcon, SVGAddFiles, SVGDeleteSection } from '../../../assets/svgs'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import CredentialOverlay from '../../CredentialsOverlay'
 import TextEditor from '../../TextEditor/Texteditor'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
-import MinimalCredentialViewer from '../../MinimalCredentialViewer'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
+import {
+  calculateDuration,
+  dedupeSelectedCredentials,
+  buildCredentialLinks,
+  parseCredentialLink
+} from '../../../utils/resumeSections'
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
+import SectionHeader from '../../common/SectionHeader'
 
 const PinkSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
@@ -53,23 +53,6 @@ interface ProfessionalAffiliationsProps {
   evidence?: string[][]
   allFiles?: FileItem[]
   onRemoveFile?: (sectionId: string, itemIndex: number, fileIndex: number) => void
-}
-
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  vc: any
-}
-
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
 }
 
 interface AffiliationItem {
@@ -95,15 +78,15 @@ export default function ProfessionalAffiliations({
   allFiles = [],
   onRemoveFile
 }: ProfessionalAffiliationsProps) {
-  const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const dispatch = useAppDispatch()
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
+  const vcs = useAppSelector(state => state.vc.vcs)
   // const [openCredDialog, setOpenCredDialog] = useState(false)
   // const [dialogCredObj, setDialogCredObj] = useState<any>(null)
 
@@ -145,61 +128,11 @@ export default function ProfessionalAffiliations({
     [dispatch]
   )
 
-  function calculateDuration(startDate: string, endDate: string): string {
-    if (!startDate || !endDate) return ''
-    try {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      let years = end.getFullYear() - start.getFullYear()
-      let months = end.getMonth() - start.getMonth()
-      if (months < 0) {
-        years--
-        months += 12
-      }
-      let result = ''
-      if (years > 0) {
-        result += `${years} year${years > 1 ? 's' : ''}`
-      }
-      if (months > 0) {
-        if (result) result += ' '
-        result += `${months} month${months > 1 ? 's' : ''}`
-      }
-      return result || 'Less than a month'
-    } catch (error) {
-      return ''
-    }
-  }
-
-  // Helper to get credential name (copied verbatim from resumePreview)
-  function getCredentialName(claim: any): string {
-    try {
-      if (!claim || typeof claim !== 'object') {
-        return 'Invalid Credential'
-      }
-      const credentialSubject = claim.credentialSubject
-      if (!credentialSubject || typeof credentialSubject !== 'object') {
-        return 'Unknown Credential'
-      }
-      if (credentialSubject.employeeName) {
-        return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-      }
-      if (credentialSubject.volunteerWork) {
-        return `Volunteer: ${credentialSubject.volunteerWork}`
-      }
-      if (credentialSubject.role) {
-        return `Employment: ${credentialSubject.role}`
-      }
-      if (credentialSubject.credentialName) {
-        return credentialSubject.credentialName
-      }
-      if (credentialSubject.achievement && credentialSubject.achievement[0]?.name) {
-        return credentialSubject.achievement[0].name
-      }
-      return 'Credential'
-    } catch {
-      return 'Credential'
-    }
-  }
+  const calculateDurationMemo = useCallback(
+    (startDate: string, endDate: string | undefined, activeAffiliation: boolean) =>
+      calculateDuration(startDate, endDate, activeAffiliation),
+    []
+  )
 
   useEffect(() => {
     const items =
@@ -209,19 +142,58 @@ export default function ProfessionalAffiliations({
         ? resume.professionalAffiliations.items
         : []
     if (items.length > 0) {
-      const typedItems = items.map((item: any) => ({
-        name: item.name || '',
-        organization: item.organization || '',
-        startDate: item.startDate || '',
-        endDate: item.endDate || '',
-        activeAffiliation: !!item.activeAffiliation,
-        id: item.id || '',
-        verificationStatus: item.verificationStatus || 'unverified',
-        credentialLink: item.credentialLink || '',
-        duration: item.duration || '',
-        description: item.description || '',
-        selectedCredentials: item.selectedCredentials || []
-      })) as AffiliationItem[]
+      const typedItems = items.map((item: any, idx: number) => {
+        let selectedCredentials: SelectedCredential[] = item.selectedCredentials || []
+        if (
+          (!selectedCredentials || selectedCredentials.length === 0) &&
+          item.credentialLink
+        ) {
+          try {
+            const credLinksArray = JSON.parse(item.credentialLink)
+            if (Array.isArray(credLinksArray)) {
+              const parsed = credLinksArray
+                .map((credLink: string) => parseCredentialLink(credLink))
+                .filter(Boolean) as {
+                credObj: any
+                credId: string
+                fileId: string
+              }[]
+              selectedCredentials = parsed.map(p => ({
+                id: p.fileId || p.credId,
+                url: '',
+                name:
+                  p.credObj?.credentialSubject?.achievement?.[0]?.name ||
+                  p.credObj?.credentialSubject?.credentialName ||
+                  'Credential',
+                vc: p.credObj,
+                fileId: p.fileId
+              }))
+              selectedCredentials = dedupeSelectedCredentials(selectedCredentials)
+            }
+          } catch (e) {
+            console.error(
+              'Error parsing credentialLink:',
+              e,
+              'for affiliation item:',
+              item.id || idx
+            )
+          }
+        }
+
+        return {
+          name: item.name || '',
+          organization: item.organization || '',
+          startDate: item.startDate || '',
+          endDate: item.endDate || '',
+          activeAffiliation: !!item.activeAffiliation,
+          id: item.id || '',
+          verificationStatus: item.verificationStatus || 'unverified',
+          credentialLink: item.credentialLink || '',
+          duration: item.duration || '',
+          description: item.description || '',
+          selectedCredentials
+        }
+      }) as AffiliationItem[]
 
       const needUpdate =
         initialLoadRef.current || typedItems.length !== affiliations.length
@@ -254,7 +226,11 @@ export default function ProfessionalAffiliations({
     affiliations.forEach((affiliation, index) => {
       if (useDuration[index]) {
         if (affiliation.startDate && affiliation.endDate) {
-          const newDur = calculateDuration(affiliation.startDate, affiliation.endDate)
+          const newDur = calculateDurationMemo(
+            affiliation.startDate,
+            affiliation.endDate,
+            affiliation.activeAffiliation
+          )
           if (newDur && newDur !== affiliation.duration) {
             setAffiliations(prev => {
               const updated = [...prev]
@@ -280,7 +256,7 @@ export default function ProfessionalAffiliations({
         }
       }
     })
-  }, [affiliations, useDuration, dispatch])
+  }, [affiliations, useDuration, dispatch, calculateDurationMemo])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -299,7 +275,11 @@ export default function ProfessionalAffiliations({
         if (!useDuration[index]) {
           aff.duration = ''
         } else if (field === 'startDate' || field === 'endDate') {
-          aff.duration = calculateDuration(aff.startDate, aff.endDate)
+          aff.duration = calculateDurationMemo(
+            aff.startDate,
+            aff.endDate,
+            aff.activeAffiliation
+          )
         }
         updated[index] = aff
         if (field !== 'description') {
@@ -308,7 +288,7 @@ export default function ProfessionalAffiliations({
         return updated
       })
     },
-    [debouncedReduxUpdate, useDuration]
+    [debouncedReduxUpdate, useDuration, calculateDurationMemo]
   )
 
   const handleDescriptionChange = useCallback(
@@ -424,33 +404,15 @@ export default function ProfessionalAffiliations({
             vc: credential
           }
         })
-        // Deduplicate by id
-        const deduped: SelectedCredential[] = Array.from(
-          new Map(selectedCredentials.map(c => [c.id, c])).values()
-        )
+        const deduped: SelectedCredential[] =
+          dedupeSelectedCredentials(selectedCredentials)
         setAffiliations(prev => {
           const updated = [...prev]
-          // Build credentialLink as a JSON stringified array
-          const credLinks = deduped
-            .map(cred => {
-              let fileId = ''
-              if (
-                cred.vc?.originalItem?.id &&
-                !cred.vc.originalItem.id.startsWith('urn:')
-              ) {
-                fileId = cred.vc.originalItem.id
-              } else if (cred.vc?.id && !cred.vc.id.startsWith('urn:')) {
-                fileId = cred.vc.id
-              } else {
-                fileId = cred.id
-              }
-              return fileId && cred.vc ? `${fileId},${JSON.stringify(cred.vc)}` : ''
-            })
-            .filter(Boolean)
+          const credLinksString = buildCredentialLinks(deduped)
           updated[activeSectionIndex] = {
             ...updated[activeSectionIndex],
             verificationStatus: 'verified',
-            credentialLink: credLinks.length ? JSON.stringify(credLinks) : '',
+            credentialLink: credLinksString,
             selectedCredentials: deduped
           }
           dispatch(
@@ -474,17 +436,12 @@ export default function ProfessionalAffiliations({
         const updated = [...prev]
         const aff = { ...updated[affIndex] }
         const newCreds = aff.selectedCredentials.filter((_, i) => i !== credIndex)
-        // Deduplicate by id
-        aff.selectedCredentials = Array.from(
-          new Map(newCreds.map(c => [c.id, c])).values()
-        )
+        aff.selectedCredentials = dedupeSelectedCredentials(newCreds)
         if (!aff.selectedCredentials.length) {
           aff.verificationStatus = 'unverified'
           aff.credentialLink = ''
         } else {
-          aff.credentialLink = aff.selectedCredentials[0]?.vc
-            ? JSON.stringify(aff.selectedCredentials[0].vc)
-            : ''
+          aff.credentialLink = buildCredentialLinks(aff.selectedCredentials)
         }
         updated[affIndex] = aff
         dispatch(
@@ -502,7 +459,7 @@ export default function ProfessionalAffiliations({
   useEffect(() => {
     // Add event listener for opening credentials overlay
     const handleOpenCredentialsEvent = (event: CustomEvent) => {
-      const { sectionId, itemIndex, selectedText } = event.detail
+      const { sectionId, itemIndex } = event.detail
       if (sectionId === 'professionalAffiliations') {
         setActiveSectionIndex(itemIndex)
         setShowCredentialsOverlay(true)
@@ -545,41 +502,13 @@ export default function ProfessionalAffiliations({
             gap: 2
           }}
         >
-          <Box
-            display='flex'
-            alignItems='center'
-            justifyContent='space-between'
-            onClick={() => toggleExpanded(index)}
-            sx={{ cursor: 'pointer' }}
-          >
-            <Box display='flex' alignItems='center' gap={2} flexGrow={1}>
-              <SVGSectionIcon />
-              {!expandedItems[index] ? (
-                <>
-                  <Typography variant='body1'>Affiliation:</Typography>
-                  <Typography variant='body1' sx={{ fontWeight: 'medium' }}>
-                    {affiliation.name || 'Untitled Affiliation'}
-                  </Typography>
-                </>
-              ) : (
-                <Box display='flex' alignItems='center'>
-                  <Typography variant='body1'>Affiliation Details</Typography>
-                </Box>
-              )}
-            </Box>
-            <IconButton
-              onClick={e => {
-                e.stopPropagation()
-                toggleExpanded(index)
-              }}
-              sx={{
-                transform: expandedItems[index] ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s ease'
-              }}
-            >
-              <SVGDownIcon />
-            </IconButton>
-          </Box>
+          <SectionHeader
+            title='Affiliation'
+            subtitle={affiliation.name || 'Untitled Affiliation'}
+            expanded={!!expandedItems[index]}
+            onToggle={() => toggleExpanded(index)}
+            icon={<SVGSectionIcon />}
+          />
 
           {expandedItems[index] && (
             <>

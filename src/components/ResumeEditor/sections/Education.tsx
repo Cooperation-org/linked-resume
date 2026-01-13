@@ -11,8 +11,6 @@ import {
   FormGroup,
   Button,
   IconButton,
-  Dialog,
-  DialogContent,
   useTheme,
   useMediaQuery
 } from '@mui/material'
@@ -24,16 +22,21 @@ import {
 } from '../../../assets/svgs'
 import TextEditor from '../../TextEditor/Texteditor'
 import { StyledButton } from './StyledButton'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppSelector } from '../../../redux/hooks'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
-import CloseIcon from '@mui/icons-material/Close'
 import CredentialOverlay from '../../CredentialsOverlay'
-import AttachFileIcon from '@mui/icons-material/AttachFile'
-import MinimalCredentialViewer from '../../MinimalCredentialViewer'
 import VerifiedCredentialsList from '../../common/VerifiedCredentialsList'
 import AttachedFilesList from '../../common/AttachedFilesList'
+import {
+  calculateDuration,
+  dedupeSelectedCredentials,
+  buildCredentialLinks,
+  parseCredentialLink
+} from '../../../utils/resumeSections'
+import { FileItem, SelectedCredential } from '../../../types/resumeSections'
 
 const PinkSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
@@ -81,54 +84,6 @@ interface EducationItem {
   attachedFiles?: string[]
 }
 
-interface SelectedCredential {
-  id: string
-  url: string
-  name: string
-  vc?: any // full object
-}
-
-interface FileItem {
-  id: string
-  file: File
-  name: string
-  url: string
-  uploaded: boolean
-  fileExtension: string
-  googleId?: string
-}
-
-// Helper to get credential name (copied verbatim from resumePreview)
-function getCredentialName(claim: any): string {
-  try {
-    if (!claim || typeof claim !== 'object') {
-      return 'Invalid Credential'
-    }
-    const credentialSubject = claim.credentialSubject
-    if (!credentialSubject || typeof credentialSubject !== 'object') {
-      return 'Unknown Credential'
-    }
-    if (credentialSubject.employeeName) {
-      return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-    }
-    if (credentialSubject.volunteerWork) {
-      return `Volunteer: ${credentialSubject.volunteerWork}`
-    }
-    if (credentialSubject.role) {
-      return `Employment: ${credentialSubject.role}`
-    }
-    if (credentialSubject.credentialName) {
-      return credentialSubject.credentialName
-    }
-    if (credentialSubject.achievement && credentialSubject.achievement[0]?.name) {
-      return credentialSubject.achievement[0].name
-    }
-    return 'Credential'
-  } catch {
-    return 'Credential'
-  }
-}
-
 export default function Education({
   onAddFiles,
   onDelete,
@@ -139,17 +94,14 @@ export default function Education({
   onRemoveFile
 }: EducationProps) {
   const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
-  const vcs = useSelector((state: any) => state.vcReducer.vcs)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
+  const vcs = useAppSelector(state => state.vc.vcs)
   const reduxUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
   const theme = useTheme()
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [showCredentialsOverlay, setShowCredentialsOverlay] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
-  const [openCredDialog, setOpenCredDialog] = useState(false)
-  const [dialogCredObj, setDialogCredObj] = useState<any>(null)
-
   const [educations, setEducations] = useState<EducationItem[]>([
     {
       type: 'Bachelors',
@@ -192,35 +144,9 @@ export default function Education({
     [dispatch]
   )
 
-  const calculateDuration = useCallback(
-    (
-      startDate: string,
-      endDate: string | undefined,
-      currentlyEnrolled: boolean
-    ): string => {
-      if (!startDate) return '1 year'
-
-      const endObj = currentlyEnrolled || !endDate ? new Date() : new Date(endDate)
-      const startObj = new Date(startDate)
-      if (isNaN(startObj.getTime()) || isNaN(endObj.getTime())) {
-        return '1 year'
-      }
-
-      let years = endObj.getFullYear() - startObj.getFullYear()
-      let months = endObj.getMonth() - startObj.getMonth()
-      if (months < 0) {
-        years--
-        months += 12
-      }
-
-      let str = ''
-      if (years > 0) str += `${years} year${years !== 1 ? 's' : ''}`
-      if (months > 0 || (years === 0 && months >= 0)) {
-        if (str) str += ' '
-        str += `${months} month${months !== 1 ? 's' : ''}`
-      }
-      return str || 'Less than a month'
-    },
+  const calculateDurationMemo = useCallback(
+    (startDate: string, endDate: string | undefined, currentlyEnrolled: boolean) =>
+      calculateDuration(startDate, endDate, currentlyEnrolled),
     []
   )
 
@@ -230,25 +156,65 @@ export default function Education({
         ? resume.education.items
         : []
     if (items.length > 0) {
-      const typedItems = items.map((item: any) => ({
-        type: item.type || 'Bachelors',
-        programName: item.programName || '',
-        institution: item.institution || '',
-        duration: item.duration || '1 year',
-        currentlyEnrolled: !!item.currentlyEnrolled,
-        inProgress: !!item.inProgress,
-        awardEarned: !!item.awardEarned,
-        description: item.description || '',
-        id: item.id || '',
-        verificationStatus: item.verificationStatus || 'unverified',
-        credentialLink: item.credentialLink || '',
-        selectedCredentials: item.selectedCredentials || [],
-        degree: item.degree || '',
-        field: item.field || '',
-        startDate: item.startDate || '',
-        endDate: item.endDate || '',
-        attachedFiles: item.attachedFiles || []
-      })) as EducationItem[]
+      const typedItems = items.map((item: any, idx: number) => {
+        let selectedCredentials: SelectedCredential[] = item.selectedCredentials || []
+
+        if (
+          (!selectedCredentials || selectedCredentials.length === 0) &&
+          item.credentialLink
+        ) {
+          try {
+            const credLinksArray = JSON.parse(item.credentialLink)
+            if (Array.isArray(credLinksArray)) {
+              const parsed = credLinksArray
+                .map((credLink: string) => parseCredentialLink(credLink))
+                .filter(Boolean) as {
+                credObj: any
+                credId: string
+                fileId: string
+              }[]
+              selectedCredentials = parsed.map(p => ({
+                id: p.fileId || p.credId,
+                url: '',
+                name:
+                  p.credObj?.credentialSubject?.credentialName ||
+                  p.credObj?.credentialSubject?.achievement?.[0]?.name ||
+                  'Credential',
+                vc: p.credObj,
+                fileId: p.fileId
+              }))
+              selectedCredentials = dedupeSelectedCredentials(selectedCredentials)
+            }
+          } catch (e) {
+            console.error(
+              'Error parsing credentialLink:',
+              e,
+              'for education item:',
+              item.id || idx
+            )
+          }
+        }
+
+        return {
+          type: item.type || 'Bachelors',
+          programName: item.programName || '',
+          institution: item.institution || '',
+          duration: item.duration || '1 year',
+          currentlyEnrolled: !!item.currentlyEnrolled,
+          inProgress: !!item.inProgress,
+          awardEarned: !!item.awardEarned,
+          description: item.description || '',
+          id: item.id || '',
+          verificationStatus: item.verificationStatus || 'unverified',
+          credentialLink: item.credentialLink || '',
+          selectedCredentials,
+          degree: item.degree || '',
+          field: item.field || '',
+          startDate: item.startDate || '',
+          endDate: item.endDate || '',
+          attachedFiles: item.attachedFiles || []
+        }
+      }) as EducationItem[]
 
       const shouldUpdate =
         initialLoadRef.current || typedItems.length !== educations.length
@@ -289,7 +255,11 @@ export default function Education({
           field === 'endDate' ||
           field === 'currentlyEnrolled'
         ) {
-          ed.duration = calculateDuration(ed.startDate, ed.endDate, ed.currentlyEnrolled)
+          ed.duration = calculateDurationMemo(
+            ed.startDate,
+            ed.endDate,
+            ed.currentlyEnrolled
+          )
         }
 
         updated[index] = ed
@@ -299,7 +269,7 @@ export default function Education({
         return updated
       })
     },
-    [debouncedReduxUpdate, useDuration]
+    [debouncedReduxUpdate, useDuration, calculateDurationMemo]
   )
 
   /** For the text editor => separate 1s debounce. **/
@@ -426,33 +396,15 @@ export default function Education({
             vc: credential
           }
         })
-        // Deduplicate by id
-        const deduped: SelectedCredential[] = Array.from(
-          new Map(selectedCredentials.map(c => [c.id, c])).values()
-        )
+        const deduped: SelectedCredential[] =
+          dedupeSelectedCredentials(selectedCredentials)
         setEducations(prev => {
           const updated = [...prev]
-          // Build credentialLink as a JSON stringified array
-          const credLinks = deduped
-            .map(cred => {
-              let fileId = ''
-              if (
-                cred.vc?.originalItem?.id &&
-                !cred.vc.originalItem.id.startsWith('urn:')
-              ) {
-                fileId = cred.vc.originalItem.id
-              } else if (cred.vc?.id && !cred.vc.id.startsWith('urn:')) {
-                fileId = cred.vc.id
-              } else {
-                fileId = cred.id
-              }
-              return fileId && cred.vc ? `${fileId},${JSON.stringify(cred.vc)}` : ''
-            })
-            .filter(Boolean)
+          const credLinksString = buildCredentialLinks(deduped)
           updated[activeSectionIndex] = {
             ...updated[activeSectionIndex],
             verificationStatus: 'verified',
-            credentialLink: credLinks.length ? JSON.stringify(credLinks) : '',
+            credentialLink: credLinksString,
             selectedCredentials: deduped
           }
           dispatch(
@@ -476,17 +428,12 @@ export default function Education({
         const updated = [...prev]
         const edu = { ...updated[eduIndex] }
         const newCreds = edu.selectedCredentials.filter((_, i) => i !== credIndex)
-        // Deduplicate by id
-        edu.selectedCredentials = Array.from(
-          new Map(newCreds.map(c => [c.id, c])).values()
-        )
+        edu.selectedCredentials = dedupeSelectedCredentials(newCreds)
         if (!edu.selectedCredentials.length) {
           edu.verificationStatus = 'unverified'
           edu.credentialLink = ''
         } else {
-          edu.credentialLink = edu.selectedCredentials[0]?.vc
-            ? JSON.stringify(edu.selectedCredentials[0].vc)
-            : ''
+          edu.credentialLink = buildCredentialLinks(edu.selectedCredentials)
         }
         updated[eduIndex] = edu
         dispatch(
@@ -504,7 +451,7 @@ export default function Education({
   useEffect(() => {
     // Add event listener for opening credentials overlay
     const handleOpenCredentialsEvent = (event: CustomEvent) => {
-      const { sectionId, itemIndex, selectedText } = event.detail
+      const { sectionId, itemIndex } = event.detail
       if (sectionId === 'education') {
         setActiveSectionIndex(itemIndex)
         setShowCredentialsOverlay(true)

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Box, Typography } from '@mui/material'
 import TextEditor from '../../TextEditor/Texteditor'
-import { useDispatch, useSelector } from 'react-redux'
 import { updateSection } from '../../../redux/slices/resume'
 import { RootState } from '../../../redux/store'
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks'
 
 interface ProfessionalSummaryProps {
   onAddFiles?: () => void
@@ -20,8 +20,8 @@ export default function ProfessionalSummary({
   onFocus,
   evidence = []
 }: Readonly<ProfessionalSummaryProps>) {
-  const dispatch = useDispatch()
-  const resume = useSelector((state: RootState) => state.resume.resume)
+  const dispatch = useAppDispatch()
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [description, setDescription] = useState('')
@@ -34,7 +34,7 @@ export default function ProfessionalSummary({
         setDescription(resume.summary || '')
       }
     }
-  }, [resume?.summary]) // Only depend on resume.summary, not description
+  }, [resume?.summary, description])
 
   // Cleanup timeout on unmount
   useEffect(() => {

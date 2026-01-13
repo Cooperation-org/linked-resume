@@ -14,7 +14,7 @@ import {
   DialogActions
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useAppSelector } from '../redux/hooks'
 import { RootState } from '../redux/store'
 import { prepareResumeForVC } from '../tools/resumeAdapter'
 import { getLocalStorage } from '../tools/cookie'
@@ -97,7 +97,7 @@ const ResumePreviewTopbar: React.FC<ResumePreviewTopbarProps> = ({
 }) => {
   const [showAuthError, setShowAuthError] = useState(false)
   const navigate = useNavigate()
-  const resume = useSelector((state: RootState) => state?.resume.resume)
+  const resume = useAppSelector((state: RootState) => state.resumeEditor.resume)
   const { instances } = useGoogleDrive()
   const accessToken = getLocalStorage('auth')
   const refreshToken = getLocalStorage('refresh_token')
@@ -119,34 +119,6 @@ const ResumePreviewTopbar: React.FC<ResumePreviewTopbarProps> = ({
       } else {
         navigate('/resume/new')
       }
-    }
-  }
-
-  const handleSaveDraft = async () => {
-    if (!instances?.resumeManager) {
-      console.error('Resume manager not available')
-      return
-    }
-
-    try {
-      await instances.resumeManager.saveResume({
-        resume: resume,
-        type: 'unsigned'
-      })
-    } catch (error) {
-      console.error('Error saving draft:', error)
-    }
-  }
-
-  const onSaveDraft = async () => {
-    if (typeof setIsDraftSaving === 'function') {
-      setIsDraftSaving(true)
-    }
-
-    await handleSaveDraft()
-
-    if (typeof setIsDraftSaving === 'function') {
-      setIsDraftSaving(false)
     }
   }
 
