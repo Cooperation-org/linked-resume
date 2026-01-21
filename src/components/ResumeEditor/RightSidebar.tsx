@@ -411,11 +411,11 @@ const RightSidebar = ({
               borderRadius: '100px',
               borderColor: '#3A35A2',
               color: '#3A35A2',
-              fontSize: { xs: 16, md: 18 },
+              fontSize: 16,
               textTransform: 'none',
               backgroundColor: 'transparent',
               fontFamily: 'Nunito Sans',
-              py: { xs: 1.5, md: 2 },
+              py: { xs: 1.5, md: 1 },
               width: '100%'
             }}
             onClick={handleImport}

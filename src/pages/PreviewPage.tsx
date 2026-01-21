@@ -26,7 +26,9 @@ import { getLocalStorage } from '../tools/cookie'
 import ResumePreview from '../components/resumePreview'
 import LaTeXResumePreview from '../components/LaTeXResumePreview'
 import ResumePreviewTopbar from '../components/ResumePreviewTopbar'
-import html2pdf from 'html2pdf.js'
+import { pdf } from '@react-pdf/renderer'
+import { ResumePDFDocument, generateQRCodeDataURL, getVerificationUrl } from '../components/pdf'
+import html2pdf from 'html2pdf.js' // Used only for LaTeX PDF export
 import { useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setSelectedResume } from '../redux/slices/resume'
@@ -151,32 +153,38 @@ const PreviewPage = () => {
   const exportResumeToPDF = async () => {
     if (!resumeData) return
 
-    const element = document.getElementById('resume-preview')
-    if (!element) return
-
-    const options = {
-      margin: [0, 0, 0, 0],
-      filename: `${resumeData.contact?.fullName ?? 'Resume'}_Resume.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }
-
-    const metadata = {
-      title: `${resumeData.contact?.fullName ?? 'Resume'}'s Resume`,
-      creator: 'T3 Resume Author',
-      subject: 'Resume',
-      keywords: ['Resume', 'CV', resumeData.contact?.fullName ?? 'Resume'],
-      custom: { resumeData: JSON.stringify(resumeData) }
-    }
-
-    // Temporarily reset zoom for export to avoid scaled capture
-    const prevZoom = zoom
-    setZoom(1)
     try {
-      await html2pdf().set(metadata).from(element).set(options).save()
-    } finally {
-      setZoom(prevZoom)
+      // Generate QR code data URL if we have a resumeId
+      let qrCodeDataUrl: string | undefined
+      if (resumeId) {
+        const verificationUrl = getVerificationUrl(resumeId)
+        qrCodeDataUrl = await generateQRCodeDataURL(verificationUrl)
+      }
+
+      // Generate PDF using @react-pdf/renderer
+      const blob = await pdf(
+        <ResumePDFDocument
+          resume={resumeData}
+          recommendations={recommendations}
+          resumeId={resumeId}
+          qrCodeDataUrl={qrCodeDataUrl}
+        />
+      ).toBlob()
+
+      // Download the PDF
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${resumeData.contact?.fullName ?? 'Resume'}_Resume.pdf`
+      document.body.appendChild(link)
+      link.click()
+      URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+
+      setSnackbar({ open: true, message: 'PDF downloaded successfully', severity: 'success' })
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      setSnackbar({ open: true, message: 'Failed to generate PDF', severity: 'error' })
     }
   }
 

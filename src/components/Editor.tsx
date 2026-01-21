@@ -168,7 +168,7 @@ const ResumeEditor: React.FC = () => {
   // Responsive constants
   const SPACING = {
     mobile: { px: 2, py: 1 },
-    desktop: { px: 3, py: 1.5 }
+    desktop: { px: 2, py: 1 }
   } as const
 
   const DRAWER_WIDTH = {

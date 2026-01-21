@@ -13,7 +13,8 @@ import { getLocalStorage } from '../tools/cookie'
 import ResumePreview from './resumePreview'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import CloseIcon from '@mui/icons-material/Close'
-import html2pdf from 'html2pdf.js'
+import { pdf } from '@react-pdf/renderer'
+import { ResumePDFDocument, generateQRCodeDataURL, getVerificationUrl } from './pdf'
 
 type RawCredentialData = {
   content?: {
@@ -61,27 +62,39 @@ const ResumePreviewDialog: React.FC<ResumePreviewDialogProps> = ({
     [safeGet]
   )
 
-  const exportResumeToPDF = (data: any) => {
-    const element = document.getElementById('resume-preview')
-    if (!element) return
+  const exportResumeToPDF = async (data: any) => {
+    if (!data) return
 
-    const options = {
-      margin: [0, 0, 0, 0],
-      filename: `${data.contact.fullName}_Resume.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    try {
+      // Generate QR code data URL if we have a resume id
+      let qrCodeDataUrl: string | undefined
+      if (id) {
+        const verificationUrl = getVerificationUrl(id)
+        qrCodeDataUrl = await generateQRCodeDataURL(verificationUrl)
+      }
+
+      // Generate PDF using @react-pdf/renderer
+      const blob = await pdf(
+        <ResumePDFDocument
+          resume={data}
+          recommendations={[]}
+          resumeId={id}
+          qrCodeDataUrl={qrCodeDataUrl}
+        />
+      ).toBlob()
+
+      // Download the PDF
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${data.contact?.fullName ?? 'Resume'}_Resume.pdf`
+      document.body.appendChild(link)
+      link.click()
+      URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
     }
-
-    const metadata = {
-      title: `${data.contact.fullName}'s Resume`,
-      creator: 'T3 Resume Author',
-      subject: 'Resume',
-      keywords: ['Resume', 'CV', data.contact.fullName],
-      custom: { resumeData: JSON.stringify(data) }
-    }
-
-    html2pdf().set(metadata).from(element).set(options).save()
   }
 
   useEffect(() => {
