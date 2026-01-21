@@ -34,6 +34,8 @@ import {
   fetchRecommendations,
   RecommendationEntry
 } from '../services/recommendationService'
+import { getFileViaFirebase } from '../firebase/storage'
+import { mapDriveResume } from '../utils/driveResumeMapper'
 
 type RawCredentialData = {
   content?: {
@@ -255,6 +257,16 @@ const PreviewPageFromDrive: React.FC = () => {
   useEffect(() => {
     const fetchResumeFromDrive = async () => {
       try {
+        const firebaseFileData = await getFileViaFirebase(id!)
+        if (firebaseFileData) {
+          const normalized = mapDriveResume(firebaseFileData, id!)
+          if (normalized) {
+            setResumeData(normalized)
+            setIsLoading(false)
+            return
+          }
+        }
+
         const accessToken = getLocalStorage('auth')
 
         if (!accessToken) {

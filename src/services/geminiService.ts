@@ -3,12 +3,7 @@ import { RESUME_SCHEMA_DESCRIPTION } from '../utils/resumeSchema'
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1'
 // List of models to try in order of preference
 // gemini-2.0-flash is the latest and most capable
-const GEMINI_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-pro',
-  'gemini-1.5-pro'
-]
+const GEMINI_MODELS = ['gemini-2.5-flash-lite']
 
 /**
  * Calls Gemini API to parse resume text and map it to the resume schema
@@ -64,7 +59,7 @@ Return the complete resume JSON object matching the schema (JSON only, no markdo
               temperature: 0.1, // Low temperature for more consistent, structured output
               topK: 40,
               topP: 0.95,
-              maxOutputTokens: 8192
+              maxOutputTokens: 18192
               // Note: responseMimeType is not supported by REST API, we parse JSON manually
             }
           })
