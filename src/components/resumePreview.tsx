@@ -19,6 +19,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { RecommendationEntry } from '../services/recommendationService'
+import TrustScoreBadge from './TrustScoreBadge'
 
 const PAGE_SIZE = { width: '210mm', height: '297mm' }
 const HEADER_HEIGHT_PX = 150
@@ -113,7 +114,18 @@ const FirstPageHeader: React.FC<{
   socialLinks?: Record<string, string | undefined>
   email?: string
   phone?: string
-}> = ({ fullName, city, forcedId, socialLinks, email, phone }) => {
+  resume?: Resume
+  recommendationsCount?: number
+}> = ({
+  fullName,
+  city,
+  forcedId,
+  socialLinks,
+  email,
+  phone,
+  resume,
+  recommendationsCount = 0
+}) => {
   const [resumeLink, setResumeLink] = useState<string>('')
   const [hasValidId, setHasValidId] = useState<boolean>(false)
 
@@ -141,7 +153,7 @@ const FirstPageHeader: React.FC<{
           py: 2
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography
             sx={{ fontWeight: 600, color: '#2E2E48', fontSize: '28px', lineHeight: 1 }}
           >
@@ -151,6 +163,14 @@ const FirstPageHeader: React.FC<{
             <Typography sx={{ fontWeight: 400, color: '#666', fontSize: '18px' }}>
               {city}
             </Typography>
+          )}
+          {resume && (
+            <TrustScoreBadge
+              resume={resume}
+              recommendations={recommendationsCount}
+              isSigned={hasValidId}
+              compact={false}
+            />
           )}
         </Box>
 
@@ -1348,7 +1368,9 @@ const formatRecommendationDate = (value?: string) => {
   })
 }
 
-const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({ entries }) => {
+const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({
+  entries
+}) => {
   if (!entries?.length) return null
 
   return (
@@ -1421,6 +1443,48 @@ const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({ 
                     }}
                   />
                 ))}
+              </Box>
+            )}
+            {((entry as any).videoUrl || (entry as any).linkedinUrl) && (
+              <Box sx={{ mt: 1, display: 'flex', gap: 2, alignItems: 'center' }}>
+                {(entry as any).videoUrl && (
+                  <Link
+                    href={(entry as any).videoUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      color: '#DC2626',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                  >
+                    ▶ Video Testimonial
+                  </Link>
+                )}
+                {(entry as any).linkedinUrl && (
+                  <Link
+                    href={(entry as any).linkedinUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      color: '#0A66C2',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                  >
+                    LinkedIn Profile
+                  </Link>
+                )}
               </Box>
             )}
           </Box>
@@ -1589,6 +1653,13 @@ const ResumePreview: React.FC<{
       }
       // Social links are now in the first page header, so we don't add them here
 
+      // Recommendations section - moved higher for better visibility to recruiters
+      if (recommendations?.length) {
+        elements.push(
+          <RecommendationsSection key='recommendations' entries={recommendations} />
+        )
+      }
+
       // Experience section - add title then each item separately
       if (resume.experience?.items?.length) {
         elements.push(
@@ -1723,12 +1794,6 @@ const ResumePreview: React.FC<{
         resume.publications.items.forEach(item => {
           elements.push(<PublicationItem key={`publication-${item.id}`} item={item} />)
         })
-      }
-
-      if (recommendations?.length) {
-        elements.push(
-          <RecommendationsSection key='recommendations' entries={recommendations} />
-        )
       }
 
       // Volunteer Work - add title then each item separately
@@ -1873,6 +1938,8 @@ const ResumePreview: React.FC<{
                   socialLinks={resume.contact?.socialLinks}
                   email={resume.contact?.email}
                   phone={resume.contact?.phone}
+                  resume={resume}
+                  recommendationsCount={recommendations?.length || 0}
                 />
               ) : (
                 <SubsequentPageHeader

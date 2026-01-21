@@ -30,6 +30,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import { getOrCreateAppInstanceDid } from '@cooperation/vc-storage'
 import ProtectedRoute from './components/ProtectedRoute'
 import RecommendationPage from './pages/RecommendationPage'
+import VerificationPage from './pages/VerificationPage'
 
 const App = () => {
   const dispatch: AppDispatch = useDispatch()
@@ -76,10 +77,12 @@ const App = () => {
             <Route path='/resume/import' element={<ImportPage />} />
             <Route path='/resume/upload' element={<ResumeUploadPage />} />
             <Route path='/resume/view' element={<PreviewPage />} />
-            <Route path='/resume/view/:id' element={<PreviewPageFromDrive />} />
             <Route path='/myresumes' element={<MyResumes />} />
           </Route>
-        <Route path='/resume/recommend/:id' element={<RecommendationPage />} />
+          {/* Public routes - accessible without authentication */}
+          <Route path='/resume/view/:id' element={<PreviewPageFromDrive />} />
+          <Route path='/resume/recommend/:id' element={<RecommendationPage />} />
+          <Route path='/verify/:id' element={<VerificationPage />} />
           <Route path='*' element={<Error404 />} />
         </Route>
         {/* Landing page outside of Layout */}

@@ -14,6 +14,8 @@ export type RecommendationInput = {
   relationship?: string
   email?: string
   skills?: string[]
+  videoUrl?: string
+  linkedinUrl?: string
 }
 
 export interface RecommendationEntry extends RecommendationInput {
@@ -40,6 +42,8 @@ export const fetchRecommendations = async (
         relationship: data.relationship ?? '',
         email: data.email ?? '',
         skills: Array.isArray(data.skills) ? data.skills : [],
+        videoUrl: data.videoUrl ?? '',
+        linkedinUrl: data.linkedinUrl ?? '',
         createdAt: data.createdAt?.toDate
           ? data.createdAt.toDate().toISOString()
           : data.createdAt ?? ''

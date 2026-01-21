@@ -37,7 +37,9 @@ const RecommendationPage: React.FC = () => {
     relationship: '',
     email: '',
     skills: [],
-    skillsInput: ''
+    skillsInput: '',
+    videoUrl: '',
+    linkedinUrl: ''
   })
   const [submitting, setSubmitting] = useState(false)
   const [snackbar, setSnackbar] = useState<{
@@ -102,7 +104,9 @@ const RecommendationPage: React.FC = () => {
         message: formState.message.trim(),
         relationship: formState.relationship?.trim(),
         email: formState.email?.trim(),
-        skills: formState.skills ?? []
+        skills: formState.skills ?? [],
+        videoUrl: formState.videoUrl?.trim(),
+        linkedinUrl: formState.linkedinUrl?.trim()
       }
       const created = await submitRecommendation(resumeId, payload)
       if (created) {
@@ -116,7 +120,9 @@ const RecommendationPage: React.FC = () => {
           relationship: '',
           email: '',
           skills: [],
-          skillsInput: ''
+          skillsInput: '',
+          videoUrl: '',
+          linkedinUrl: ''
         })
         setSnackbar({
           open: true,
@@ -264,6 +270,26 @@ const RecommendationPage: React.FC = () => {
                     setFormState(prev => ({ ...prev, message: e.target.value }))
                   }
                   fullWidth
+                />
+                <TextField
+                  label='Video testimonial URL (YouTube, Loom, etc.)'
+                  placeholder='https://www.youtube.com/watch?v=...'
+                  value={formState.videoUrl}
+                  onChange={e =>
+                    setFormState(prev => ({ ...prev, videoUrl: e.target.value }))
+                  }
+                  fullWidth
+                  helperText='Optional: Add a video testimonial for more credibility'
+                />
+                <TextField
+                  label='Your LinkedIn profile URL'
+                  placeholder='https://linkedin.com/in/your-profile'
+                  value={formState.linkedinUrl}
+                  onChange={e =>
+                    setFormState(prev => ({ ...prev, linkedinUrl: e.target.value }))
+                  }
+                  fullWidth
+                  helperText='Optional: Help verify your identity'
                 />
                 <Button
                   variant='contained'
