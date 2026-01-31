@@ -29,7 +29,6 @@ import {
   fetchRecommendations,
   RecommendationEntry
 } from '../services/recommendationService'
-import { calculateTrustStats } from '../components/TrustScoreBadge'
 
 interface VerifiedItem {
   id: string
@@ -77,10 +76,6 @@ const VerificationPage: React.FC = () => {
     loadData()
   }, [resumeId])
 
-  const trustStats = useMemo(() => {
-    if (!resumeData) return null
-    return calculateTrustStats(resumeData, recommendations.length, !!resumeId)
-  }, [resumeData, recommendations.length, resumeId])
 
   const verifiedItems = useMemo((): VerifiedItem[] => {
     if (!resumeData) return []
@@ -276,36 +271,7 @@ const VerificationPage: React.FC = () => {
                 Verified credentials and endorsements
               </Typography>
             </Box>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                px: 2,
-                py: 1.5,
-                borderRadius: 2,
-                bgcolor: trustStats?.bgColor || '#F3F4F6',
-                border: `2px solid ${trustStats?.color || '#6B7280'}`
-              }}
-            >
-              {trustStats?.level === 'verified' ? (
-                <VerifiedUserIcon sx={{ fontSize: 32, color: trustStats.color }} />
-              ) : (
-                <ShieldIcon
-                  sx={{ fontSize: 32, color: trustStats?.color || '#6B7280' }}
-                />
-              )}
-              <Box>
-                <Typography
-                  sx={{ fontWeight: 700, fontSize: '18px', color: trustStats?.color }}
-                >
-                  {trustStats?.label}
-                </Typography>
-                <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
-                  {trustStats?.percentage}% credibility score
-                </Typography>
-              </Box>
-            </Box>
+            
           </Box>
 
           <Divider sx={{ my: 2 }} />

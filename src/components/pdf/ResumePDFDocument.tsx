@@ -85,62 +85,6 @@ const getSummary = (resume: Resume): string => {
   return resume.summary || ''
 }
 
-// Trust Score Badge Component
-const TrustScoreBadge: React.FC<{
-  resume: Resume
-  recommendations: number
-  isSigned: boolean
-}> = ({ resume, recommendations, isSigned }) => {
-  // Calculate trust score
-  let totalItems = 0
-  let verifiedItems = 0
-
-  const checkItems = (items: any[] | undefined) => {
-    if (!items?.length) return
-    items.forEach(item => {
-      totalItems++
-      if (item.verificationStatus === 'verified') {
-        verifiedItems++
-      }
-    })
-  }
-
-  checkItems(resume.experience?.items)
-  checkItems(resume.education?.items)
-  checkItems(resume.skills?.items)
-  checkItems(resume.certifications?.items)
-  checkItems(resume.projects?.items)
-
-  const hasRecommendations = recommendations > 0
-  const trustScore =
-    totalItems > 0
-      ? Math.round((verifiedItems / totalItems) * 100)
-      : hasRecommendations
-        ? 50
-        : 0
-
-  let status: string
-  let color: string
-  if (isSigned && trustScore >= 70) {
-    status = 'Verified'
-    color = '#16A34A'
-  } else if (trustScore > 0 || hasRecommendations || isSigned) {
-    status = 'Partially Verified'
-    color = '#CA8A04'
-  } else {
-    status = 'Unverified'
-    color = '#6B7280'
-  }
-
-  return (
-    <View style={styles.trustBadge}>
-      <Text style={[styles.trustBadgeText, { color }]}>
-        {status}
-        {hasRecommendations && ` (${recommendations} Rec)`}
-      </Text>
-    </View>
-  )
-}
 
 // First Page Header Component
 const FirstPageHeader: React.FC<{
@@ -160,11 +104,6 @@ const FirstPageHeader: React.FC<{
           {contact?.location?.city && (
             <Text style={styles.headerCity}>{contact.location.city}</Text>
           )}
-          <TrustScoreBadge
-            resume={resume}
-            recommendations={recommendations}
-            isSigned={hasValidId}
-          />
         </View>
 
         {(contact?.email || contact?.phone) && (
