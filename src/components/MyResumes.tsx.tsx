@@ -4,8 +4,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { RootState, AppDispatch } from '../redux/store'
 import { useEffect } from 'react'
 import { fetchUserResumes } from '../redux/slices/myresumes'
-import { refreshAccessToken } from '../tools/auth'
-import { getLocalStorage } from '../tools/cookie'
+import { authService } from '../services/authService'
 
 const ResumeScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>()
@@ -25,10 +24,8 @@ const ResumeScreen: React.FC = () => {
           /auth|token|credential|OAuth|authentication/i.test(error.message)
         ) {
           try {
-            const refreshToken = getLocalStorage('refresh_token')
-            if (refreshToken) {
-              await refreshAccessToken(refreshToken)
-
+            const newToken = await authService.refreshAccessToken()
+            if (newToken) {
               dispatch(fetchUserResumes())
             }
           } catch (refreshError) {
@@ -42,10 +39,7 @@ const ResumeScreen: React.FC = () => {
   }, [dispatch])
   const handleRetryWithRefresh = async () => {
     try {
-      const refreshToken = getLocalStorage('refresh_token')
-      if (refreshToken) {
-        await refreshAccessToken(refreshToken)
-      }
+      await authService.refreshAccessToken()
       dispatch(fetchUserResumes())
     } catch (error) {
       console.error('Error refreshing token:', error)

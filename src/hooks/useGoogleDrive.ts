@@ -4,7 +4,7 @@ import { GoogleDriveStorage, Resume, ResumeVC } from '@cooperation/vc-storage' /
 import { useDispatch } from 'react-redux'
 import { setAuth } from '../redux/slices/auth'
 import { getLocalStorage } from '../tools/cookie'
-import { authenticatedFetch } from '../tools/auth'
+import { authenticatedFetch } from '../tools/authenticatedFetch'
 import StorageService from '../storage-singlton'
 
 interface ClaimDetail {
@@ -106,9 +106,7 @@ const useGoogleDrive = () => {
         url.searchParams.set('q', `'${folderId}' in parents and trashed=false`)
         url.searchParams.set('fields', 'files(id,name,mimeType,thumbnailLink)')
 
-        const response = await authenticatedFetch(url.toString(), {}, (token: string) => {
-          dispatch(setAuth({ accessToken: token }))
-        })
+        const response = await authenticatedFetch(url.toString(), {})
 
         if (!response.ok) {
           throw new Error(
@@ -123,7 +121,7 @@ const useGoogleDrive = () => {
         return []
       }
     },
-    [dispatch]
+    []
   )
 
   return {

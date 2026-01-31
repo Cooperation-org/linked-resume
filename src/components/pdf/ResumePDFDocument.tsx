@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { styles } from './pdfStyles'
 import { RecommendationEntry } from '../../services/recommendationService'
+import { formatPlatformName } from '../../utils/platformUtils'
 
 interface ResumePDFDocumentProps {
   resume: Resume
@@ -61,18 +62,6 @@ const extractSkillsFromHTML = (htmlContent: string): string[] => {
     .filter(Boolean)
 }
 
-// Helper to format recommendation date
-const formatRecommendationDate = (value?: string): string => {
-  if (!value) return ''
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
-
 // Helper to extract summary from professionalSummary.credentialSubject.narrative if present
 const getSummary = (resume: Resume): string => {
   if (
@@ -89,10 +78,9 @@ const getSummary = (resume: Resume): string => {
 // First Page Header Component
 const FirstPageHeader: React.FC<{
   resume: Resume
-  recommendations: number
   qrCodeDataUrl?: string
   resumeId?: string | null
-}> = ({ resume, recommendations, qrCodeDataUrl, resumeId }) => {
+}> = ({ resume, qrCodeDataUrl, resumeId }) => {
   const { contact } = resume
   const hasValidId = !!resumeId && !!qrCodeDataUrl
 
@@ -110,7 +98,7 @@ const FirstPageHeader: React.FC<{
           <View style={styles.headerContactRow}>
             {contact.email && (
               <Link src={`mailto:${contact.email}`} style={styles.headerLink}>
-                {contact.email}
+                Email
               </Link>
             )}
             {contact.email && contact.phone && (
@@ -135,7 +123,7 @@ const FirstPageHeader: React.FC<{
                         src={url.startsWith('http') ? url : `https://${url}`}
                         style={styles.headerLink}
                       >
-                        {url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                        {formatPlatformName(platform)}
                       </Link>
                     </View>
                     {index < array.length - 1 &&
@@ -198,7 +186,7 @@ const PageFooter: React.FC<{
       {' | '}
     </Text>
     <Link src={`mailto:${email}`} style={[styles.footerText, styles.footerLink]}>
-      {email}
+      Email
     </Link>
     {qrCodeDataUrl && (
       <Image src={qrCodeDataUrl} style={{ width: 24, height: 24, marginLeft: 8 }} />
@@ -213,59 +201,6 @@ const SummarySection: React.FC<{ summary?: string }> = ({ summary }) => {
     <View style={styles.summarySection}>
       <Text style={styles.sectionTitle}>Professional Summary</Text>
       <Text style={styles.summaryText}>{stripHtml(summary)}</Text>
-    </View>
-  )
-}
-
-// Recommendations Section
-const RecommendationsSection: React.FC<{ entries: RecommendationEntry[] }> = ({
-  entries
-}) => {
-  if (!entries?.length) return null
-
-  return (
-    <View style={styles.recommendationsSection}>
-      <Text style={styles.sectionTitle}>Recommendations</Text>
-      {entries.map(entry => (
-        <View key={entry.id} style={styles.recommendationItem} wrap={false}>
-          <View style={styles.recommendationHeader}>
-            <Text style={styles.recommendationAuthor}>
-              {entry.author}
-              {entry.relationship ? ` • ${entry.relationship}` : ''}
-            </Text>
-            <Text style={styles.recommendationDate}>
-              {formatRecommendationDate(entry.createdAt)}
-            </Text>
-          </View>
-          {entry.email && (
-            <Text style={styles.recommendationEmail}>{entry.email}</Text>
-          )}
-          <Text style={styles.recommendationMessage}>{entry.message}</Text>
-          {entry.skills && entry.skills.length > 0 && (
-            <View style={styles.recommendationSkills}>
-              {entry.skills.map(skill => (
-                <Text key={skill} style={styles.skillChip}>
-                  {skill}
-                </Text>
-              ))}
-            </View>
-          )}
-          {((entry as any).videoUrl || (entry as any).linkedinUrl) && (
-            <View style={styles.recommendationLinks}>
-              {(entry as any).videoUrl && (
-                <Link src={(entry as any).videoUrl} style={styles.videoLink}>
-                  Video Testimonial
-                </Link>
-              )}
-              {(entry as any).linkedinUrl && (
-                <Link src={(entry as any).linkedinUrl} style={styles.linkedinLink}>
-                  LinkedIn Profile
-                </Link>
-              )}
-            </View>
-          )}
-        </View>
-      ))}
     </View>
   )
 }
@@ -595,7 +530,6 @@ const PublicationsSection: React.FC<{ items: Publication[] }> = ({ items }) => {
 // Main Resume PDF Document
 const ResumePDFDocument: React.FC<ResumePDFDocumentProps> = ({
   resume,
-  recommendations = [],
   resumeId,
   qrCodeDataUrl
 }) => {
@@ -611,7 +545,6 @@ const ResumePDFDocument: React.FC<ResumePDFDocumentProps> = ({
       <Page size="A4" style={styles.page}>
         <FirstPageHeader
           resume={resume}
-          recommendations={recommendations.length}
           qrCodeDataUrl={qrCodeDataUrl}
           resumeId={resumeId}
         />
@@ -619,10 +552,7 @@ const ResumePDFDocument: React.FC<ResumePDFDocumentProps> = ({
         <View style={styles.contentFirstPage}>
           {summary && <SummarySection summary={summary} />}
 
-          {(recommendations?.length ?? 0) > 0 && (
-            <RecommendationsSection entries={recommendations} />
-          )}
-
+         
           {(resume.experience?.items?.length ?? 0) > 0 && (
             <ExperienceSection items={resume.experience?.items || []} />
           )}

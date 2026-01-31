@@ -1,17 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { getLocalStorage } from '../../tools/cookie'
-
 interface AuthState {
   isAuthenticated: boolean
   accessToken: string | null
 }
 
-const storedToken = getLocalStorage('auth')
-const token = storedToken && storedToken !== 'undefined' ? storedToken : null
-
 const initialState: AuthState = {
-  isAuthenticated: !!token,
-  accessToken: token
+  isAuthenticated: false,
+  accessToken: null
 }
 
 const authSlice = createSlice({

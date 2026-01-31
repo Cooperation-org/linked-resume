@@ -1,7 +1,7 @@
 // storage-singleton.ts
 import { GoogleDriveStorage, Resume, ResumeVC } from '@cooperation/vc-storage'
-import { refreshAccessToken, logout } from './tools/auth'
-import { getLocalStorage } from './tools/cookie'
+import { logout } from './tools/auth'
+import { authService } from './services/authService'
 
 // Singleton class to maintain storage instances
 class StorageService {
@@ -40,8 +40,15 @@ class StorageService {
 
   public async refreshAndReinitialize(): Promise<void> {
     try {
-      const newToken = await refreshAccessToken(undefined, this.onTokenUpdate)
-      this.initialize(newToken)
+      const newToken = await authService.refreshAccessToken()
+      if (newToken) {
+        this.initialize(newToken)
+        if (this.onTokenUpdate) {
+          this.onTokenUpdate(newToken)
+        }
+      } else {
+        throw new Error('Failed to refresh token')
+      }
     } catch (error) {
       console.error('Failed to refresh token and re-initialize storage:', error)
       logout()
@@ -70,7 +77,7 @@ class StorageService {
   // Getters with automatic token refresh on auth errors
   public getStorage(): GoogleDriveStorage {
     if (!this.storage) {
-      const token = getLocalStorage('auth')
+      const token = authService.getAccessToken()
       if (token) {
         this.initialize(token)
       } else {
@@ -82,7 +89,7 @@ class StorageService {
 
   public getResumeManager(): Resume {
     if (!this.resumeManager) {
-      const token = getLocalStorage('auth')
+      const token = authService.getAccessToken()
       if (token) {
         this.initialize(token)
       } else {

@@ -1,8 +1,7 @@
-import { refreshAccessToken } from './../../tools/auth'
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { GoogleDriveStorage, Resume as ResumeManager } from '@cooperation/vc-storage' //NOSONAR
-import { getLocalStorage } from '../../tools/cookie'
+import { authService } from '../../services/authService'
 import StorageService from '../../storage-singlton'
 
 // Define Resume Types
@@ -81,10 +80,10 @@ const initialState: ResumeState = {
 
 export const fetchUserResumes = createAsyncThunk('resume/fetchUserResumes', async () => {
   try {
-    const accessToken = getLocalStorage('auth')
-    const refreshToken = getLocalStorage('refresh_token')
+    // Get valid access token (will refresh if needed)
+    const accessToken = await authService.getValidAccessToken()
 
-    if (!accessToken || !refreshToken) {
+    if (!accessToken) {
       throw new Error(
         'No authentication token found. Please sign in to view your resumes.'
       )
@@ -124,14 +123,13 @@ export const fetchUserResumes = createAsyncThunk('resume/fetchUserResumes', asyn
 
       // Check for refresh token errors
       if (/auth|token|credential|OAuth|authentication/i.test(error.message)) {
-        try {
-          await refreshAccessToken(getLocalStorage('refresh_token') as string)
-          // If refresh succeeds, throw a more user-friendly error
-          throw new Error('Please refresh the page to continue.')
-        } catch (refreshError) {
-          console.error('Failed to refresh token:', refreshError)
+        // Try to refresh token once
+        const refreshedToken = await authService.refreshAccessToken()
+        if (!refreshedToken) {
           throw new Error('Session expired. Please sign in again.')
         }
+        // If refresh succeeds, throw a more user-friendly error to retry
+        throw new Error('Please refresh the page to continue.')
       }
     }
 

@@ -19,6 +19,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { RecommendationEntry } from '../services/recommendationService'
+import { formatPlatformName } from '../utils/platformUtils'
 
 const PAGE_SIZE = { width: '210mm', height: '297mm' }
 const HEADER_HEIGHT_PX = 150
@@ -175,7 +176,7 @@ const FirstPageHeader: React.FC<{
                   '&:hover': { textDecoration: 'underline' }
                 }}
               >
-                {email}
+                Email
               </Link>
             )}
             {email && phone && (
@@ -224,7 +225,7 @@ const FirstPageHeader: React.FC<{
                         '&:hover': { textDecoration: 'underline' }
                       }}
                     >
-                      {url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                      {formatPlatformName(platform)}
                     </Link>
                   </Box>
                   {index < array.length - 1 &&

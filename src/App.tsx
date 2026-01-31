@@ -4,8 +4,7 @@ import { useDispatch } from 'react-redux'
 import { AppDispatch } from './redux/store'
 import { fetchVCs } from './redux/slices/vc'
 import { setAuth } from './redux/slices/auth'
-import { refreshAccessToken } from './tools/auth'
-import { getLocalStorage } from './tools/cookie'
+import { authService } from './services/authService'
 import StorageService from './storage-singlton'
 import Layout from './components/Layout'
 import Login from './pages/login'
@@ -41,29 +40,31 @@ const App = () => {
   }, [])
 
   useEffect(() => {
+    // Setup StorageService token update callback
     const storageService = StorageService.getInstance()
     storageService.setTokenUpdateCallback((accessToken: string) => {
       dispatch(setAuth({ accessToken }))
     })
+
+    // Subscribe to AuthService token updates
+    const unsubscribe = authService.onTokenUpdate((token) => {
+      dispatch(setAuth({ accessToken: token }))
+    })
+
+    // Initialize auth on app load
     const initializeAuth = async () => {
-      const accessToken = getLocalStorage('auth')
-      const refreshToken = getLocalStorage('refresh_token')
-      if (refreshToken && !accessToken) {
-        try {
-          console.log(
-            'Access token missing but refresh token found. Attempting to refresh...'
-          )
-          await refreshAccessToken(refreshToken, (token: string) => {
-            dispatch(setAuth({ accessToken: token }))
-          })
-        } catch (error) {
-          console.error('Failed to refresh token on app startup:', error)
-        }
-      }
+      // Try to get valid token (will refresh if needed)
+      const token = await authService.getValidAccessToken()
+      dispatch(setAuth({ accessToken: token }))
     }
 
     initializeAuth()
     dispatch(fetchVCs())
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe()
+    }
   }, [dispatch])
 
   return (
