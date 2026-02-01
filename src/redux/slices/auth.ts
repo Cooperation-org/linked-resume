@@ -1,12 +1,19 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { getLocalStorage } from '../../tools/cookie'
+
 interface AuthState {
   isAuthenticated: boolean
   accessToken: string | null
 }
 
+// Initialize from localStorage synchronously (existence check only, no validation)
+// Validation happens async in App.tsx
+const storedToken = getLocalStorage('auth')
+const token = storedToken && storedToken !== 'undefined' ? storedToken : null
+
 const initialState: AuthState = {
-  isAuthenticated: false,
-  accessToken: null
+  isAuthenticated: !!token,
+  accessToken: token
 }
 
 const authSlice = createSlice({

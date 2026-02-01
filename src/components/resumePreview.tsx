@@ -20,6 +20,13 @@ import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { RecommendationEntry } from '../services/recommendationService'
 import { formatPlatformName } from '../utils/platformUtils'
+import {
+  getCredentialLinks,
+  getCredentialName,
+  getPortfolioFromCredentialLink,
+  extractSkillsFromHTML,
+  getAllCredentialsFromLink
+} from '../utils/credentialParsingUtils'
 
 const PAGE_SIZE = { width: '210mm', height: '297mm' }
 const HEADER_HEIGHT_PX = 150
@@ -409,147 +416,7 @@ const SummarySection: React.FC<{ summary?: string }> = ({ summary }) => {
   )
 }
 
-// Helper to get credential name
-function getCredentialName(claim: any): string {
-  try {
-    if (!claim || typeof claim !== 'object') {
-      return 'Invalid Credential'
-    }
-    const credentialSubject = claim.credentialSubject
-    if (!credentialSubject || typeof credentialSubject !== 'object') {
-      return 'Unknown Credential'
-    }
-    if (credentialSubject.employeeName) {
-      return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-    }
-    if (credentialSubject.volunteerWork) {
-      return `Volunteer: ${credentialSubject.volunteerWork}`
-    }
-    if (credentialSubject.role) {
-      return `Employment: ${credentialSubject.role}`
-    }
-    if (credentialSubject.credentialName) {
-      return credentialSubject.credentialName
-    }
-    if (credentialSubject.achievement && credentialSubject.achievement[0]?.name) {
-      return credentialSubject.achievement[0].name
-    }
-    return 'Credential'
-  } catch {
-    return 'Credential'
-  }
-}
 
-// Helper to get credential links as array (handles both new and old formats)
-function getCredentialLinks(credentialLink: string | string[] | undefined): string[] {
-  if (!credentialLink) return []
-  if (Array.isArray(credentialLink)) return credentialLink
-  if (typeof credentialLink === 'string') {
-    try {
-      // Check if it's the wrapper format first
-      if (credentialLink.trim().startsWith('{') && credentialLink.includes('"fileId"')) {
-        // This is the wrapper format, return it as-is
-        return [credentialLink]
-      }
-      // Check for array format (from edit mode)
-      if (credentialLink.trim().startsWith('[')) {
-        const parsed = JSON.parse(credentialLink)
-
-        return parsed
-      }
-      // Check if it's a JSON object (but not wrapper format)
-      if (credentialLink.trim().startsWith('{')) {
-        // Single credential object, wrap in array
-        return [credentialLink]
-      }
-      // Otherwise it's a plain string
-      return [credentialLink]
-    } catch (e) {
-      console.error('Error parsing credential link:', e)
-      return [credentialLink]
-    }
-  }
-  return []
-}
-
-// Helper function to parse a single credential link and extract credential data
-function parseCredentialLink(
-  link: string
-): { credObj: any; credId: string; fileId: string } | null {
-  let credObj: any = null
-  let credId = ''
-  let fileId = ''
-
-  try {
-    // Check if this is an object wrapper with fileId
-    if (link.startsWith('{') && link.includes('"fileId"')) {
-      // Format: '{"credentialLink":"...","fileId":"..."}'
-      const wrapper = JSON.parse(link)
-      if (wrapper.fileId) {
-        fileId = wrapper.fileId
-        // Parse the actual credential from credentialLink
-        if (wrapper.credentialLink) {
-          const innerLink = wrapper.credentialLink
-          if (innerLink.includes(',{')) {
-            // Format: 'url,{json}' inside wrapper
-            const commaIdx = innerLink.indexOf(',')
-            const jsonStr = innerLink.slice(commaIdx + 1)
-            credObj = JSON.parse(jsonStr)
-            credObj.credentialId = fileId
-          } else if (innerLink.startsWith('{')) {
-            credObj = JSON.parse(innerLink)
-            credObj.credentialId = fileId
-          }
-        }
-      }
-    } else if (link.match(/^([\w-]+),\{.*\}$/)) {
-      // Format: 'fileid,{json}' (native credentials)
-      const commaIdx = link.indexOf(',')
-      fileId = link.slice(0, commaIdx)
-      credId = fileId // For native credentials, credId and fileId are the same
-      const jsonStr = link.slice(commaIdx + 1)
-      credObj = JSON.parse(jsonStr)
-      credObj.credentialId = fileId
-    } else if (link.includes(',{')) {
-      // Format: 'url,{json}' (external credentials with URL)
-      const commaIdx = link.indexOf(',')
-      const urlPart = link.slice(0, commaIdx)
-      const jsonStr = link.slice(commaIdx + 1)
-      credObj = JSON.parse(jsonStr)
-      // For external credentials, we need to extract the ID from somewhere
-      // Check if there's an ID in the credential object
-      if (credObj.id) {
-        fileId = credObj.id
-      } else if (credObj.credentialId) {
-        fileId = credObj.credentialId
-      } else {
-        // Generate a fallback ID from the URL
-        fileId = urlPart.split('/').pop() || urlPart
-      }
-      credObj.credentialId = fileId
-    } else if (link.startsWith('{')) {
-      // Format: '{json}'
-      credObj = JSON.parse(link)
-      credId = credObj.credentialId || credObj.id || ''
-      fileId = credId // For this format, use credId as fileId
-    } else if (link) {
-      // Just a plain ID
-      credId = link
-      fileId = link
-
-      // Create a minimal credential object for external credentials
-      credObj = { id: fileId, credentialId: fileId }
-    }
-
-    if (credObj || fileId) {
-      return { credObj, credId, fileId }
-    }
-  } catch (e) {
-    console.error('Error parsing credential link:', e)
-  }
-
-  return null
-}
 
 // Single function to handle ALL credential rendering for any section
 function renderSectionCredentials(
@@ -558,20 +425,8 @@ function renderSectionCredentials(
   setDialogImageUrl: any,
   setOpenCredDialog: any
 ): ReactNode {
-  // Get credential links as array
-  const credLinks = getCredentialLinks(credentialLink)
-
-  // Parse and deduplicate credentials
-  const dedupedCreds: { credObj: any; credId: string; fileId: string }[] = []
-  const seen = new Set<string>()
-
-  credLinks.forEach(link => {
-    const parsed = parseCredentialLink(link)
-    if (parsed && !seen.has(parsed.fileId)) {
-      dedupedCreds.push(parsed)
-      seen.add(parsed.fileId)
-    }
-  })
+  // Get all credentials, already deduplicated
+  const dedupedCreds = getAllCredentialsFromLink(credentialLink)
 
   // If no credentials, return null
   if (dedupedCreds.length === 0) return null
@@ -627,16 +482,6 @@ function renderSectionCredentials(
   )
 }
 
-// Helper to extract portfolio from credential link (for sections that need it)
-function getPortfolioFromCredentialLink(
-  credentialLink: string | string[] | undefined
-): any[] | undefined {
-  const credLinks = getCredentialLinks(credentialLink)
-  if (credLinks.length === 0) return undefined
-
-  const firstCred = parseCredentialLink(credLinks[0])
-  return firstCred?.credObj?.credentialSubject?.portfolio
-}
 
 // Helper function to open credential dialog with proper file ID
 function openCredentialDialog(
@@ -1188,24 +1033,6 @@ const VolunteerWorkItem: React.FC<{
       </Box>
     </Box>
   )
-}
-
-// Helper function to extract plain text from HTML and split into individual skills
-const extractSkillsFromHTML = (htmlContent: string): string[] => {
-  if (!htmlContent) return []
-
-  // Create a temporary DOM element to extract text content
-  const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = htmlContent
-
-  // Get plain text
-  const plainText = tempDiv.textContent || tempDiv.innerText || ''
-
-  // Split by commas, bullets, and newlines (similar to LaTeX parsing)
-  return plainText
-    .split(/[,•\n]+/)
-    .map(skill => skill.trim())
-    .filter(Boolean)
 }
 
 // Single Language Item Component
