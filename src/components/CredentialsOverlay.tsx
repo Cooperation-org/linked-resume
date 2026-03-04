@@ -3,6 +3,7 @@ import { Box, Typography, Button, Checkbox, styled } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch } from '../redux/store'
 import { fetchVCs } from '../redux/slices/vc'
+import { getCredentialName, getValidVCs } from '../hooks/useRightSidebarVCs'
 
 interface CredentialOverlayProps {
   onClose?: () => void
@@ -36,70 +37,7 @@ const StyledScrollbar = styled(Box)({
   }
 })
 
-const getCredentialName = (vc: any): string => {
-  try {
-    if (!vc || typeof vc !== 'object') {
-      return ''
-    }
 
-    const credentialSubject = vc.credentialSubject
-    if (!credentialSubject || typeof credentialSubject !== 'object') {
-      return ''
-    }
-
-    if (credentialSubject.employeeName) {
-      return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-    }
-    if (credentialSubject.volunteerWork) {
-      return `Volunteer: ${credentialSubject.volunteerWork}`
-    }
-    if (credentialSubject.role) {
-      return `Employment: ${credentialSubject.role}`
-    }
-    if (credentialSubject.credentialName) {
-      return credentialSubject.credentialName
-    }
-
-    if (
-      Array.isArray(credentialSubject.achievement) &&
-      credentialSubject.achievement.length > 0 &&
-      credentialSubject.achievement[0]?.name
-    ) {
-      return credentialSubject.achievement[0].name
-    }
-
-    return ''
-  } catch (error) {
-    console.error('Error getting credential name:', error)
-    return ''
-  }
-}
-
-const getValidVCs = (vcs: any[]): any[] => {
-  if (!Array.isArray(vcs)) return []
-
-  return vcs.filter(vc => {
-    try {
-      if (!vc || typeof vc !== 'object') {
-        return false
-      }
-
-      if (!vc.credentialSubject || typeof vc.credentialSubject !== 'object') {
-        return false
-      }
-
-      const credentialName = getCredentialName(vc)
-      if (!credentialName || credentialName.trim() === '') {
-        return false
-      }
-
-      return true
-    } catch (error) {
-      console.error('Error validating VC:', error)
-      return false
-    }
-  })
-}
 
 const CredentialOverlay: React.FC<CredentialOverlayProps> = ({
   onClose,

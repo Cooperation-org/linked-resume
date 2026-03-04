@@ -2,47 +2,13 @@ import React, { useState } from 'react'
 import { Box, Typography, IconButton, Dialog, DialogContent } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import MinimalCredentialViewer from '../MinimalCredentialViewer'
+import { getCredentialName } from '../../utils/credentialUtils'
 
 interface VerifiedCredentialsListProps {
   credentials: Array<any>
   onRemove: (index: number) => void
 }
 
-// getCredentialName logic from CredentialsOverlay.tsx
-function getCredentialName(vc: any): string {
-  try {
-    if (!vc || typeof vc !== 'object') {
-      return ''
-    }
-    const credentialSubject = vc.credentialSubject
-    if (!credentialSubject || typeof credentialSubject !== 'object') {
-      return ''
-    }
-    if (credentialSubject.employeeName) {
-      return `Performance Review: ${credentialSubject.employeeJobTitle || 'Unknown Position'}`
-    }
-    if (credentialSubject.volunteerWork) {
-      return `Volunteer: ${credentialSubject.volunteerWork}`
-    }
-    if (credentialSubject.role) {
-      return `Employment: ${credentialSubject.role}`
-    }
-    if (credentialSubject.credentialName) {
-      return credentialSubject.credentialName
-    }
-    if (
-      Array.isArray(credentialSubject.achievement) &&
-      credentialSubject.achievement.length > 0 &&
-      credentialSubject.achievement[0]?.name
-    ) {
-      return credentialSubject.achievement[0].name
-    }
-    return ''
-  } catch (error) {
-    console.error('Error getting credential name:', error)
-    return ''
-  }
-}
 
 const VerifiedCredentialsList: React.FC<VerifiedCredentialsListProps> = ({
   credentials,

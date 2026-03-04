@@ -13,16 +13,12 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material'
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getLocalStorage } from '../tools/cookie'
-import { useSelector, useDispatch } from 'react-redux'
-import { clearAuth, setAuth } from '../redux/slices/auth'
-import { RootState } from '../redux/store'
 import Notification from './common/Notification'
 import MenuIcon from '@mui/icons-material/Menu'
 import CloseIcon from '@mui/icons-material/Close'
-import { login, logout } from '../tools/auth'
+import { useState } from 'react'
+import { useNav } from '../hooks/useNav'
 
 const navStyles = {
   color: 'white',
@@ -42,147 +38,59 @@ const mobileNavStyles = {
 }
 
 const Nav = () => {
-  const dispatch = useDispatch()
-  const isLogged = useSelector((state: RootState) => state.auth.isAuthenticated)
   const navigate = useNavigate()
-  const [showNotification, setShowNotification] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [showNotification, setShowNotification] = useState(false)
 
-  useEffect(() => {
-    const token = getLocalStorage('auth')
-    if (token) {
-      dispatch(setAuth({ accessToken: token }))
-    }
-  }, [dispatch])
+  const { isLogged, mobileMenuOpen, setMobileMenuOpen, navItems, handleLogout, handleLogin } = useNav()
 
-  const handleLogout = () => {
-    logout()
-    dispatch(clearAuth())
+  const onLogout = () => {
+    handleLogout()
     setShowNotification(true)
-    navigate('/')
-    setMobileMenuOpen(false)
   }
-
-  const handleLogin = () => {
-    if (!isLogged) {
-      login('/resume/import')
-    } else {
-      navigate('/resume/import')
-    }
-  }
-
-  const navItems = [
-    { label: 'Why Resume Author?', action: () => setMobileMenuOpen(false) },
-    { label: 'How it works', action: () => setMobileMenuOpen(false) },
-    { label: 'Benefits', action: () => setMobileMenuOpen(false) },
-    {
-      label: 'Help & FAQ',
-      action: () => {
-        navigate('/faq')
-        setMobileMenuOpen(false)
-      }
-    },
-    { label: 'Learn More', action: () => setMobileMenuOpen(false) }
-  ]
 
   return (
     <>
-      <AppBar
-        position='static'
-        elevation={0}
-        sx={{ bgcolor: '#4527A0', pt: 1, px: { xs: 2, sm: 3, md: 4 } }}
-      >
-        <Toolbar
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            padding: { xs: '0 4px', md: '0 16px' }
-          }}
-        >
+      <AppBar position='static' elevation={0} sx={{ bgcolor: '#4527A0', pt: 1, px: { xs: 2, sm: 3, md: 4 } }}>
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', padding: { xs: '0 4px', md: '0 16px' } }}>
+          {/* Logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <img
-              src={Logo}
-              alt='Résumé Author'
-              style={{ height: isMobile ? '40px' : '50px' }}
-            />
-            <Typography
-              sx={{
-                fontFamily: 'Poppins',
-                fontSize: { xs: '24px', md: '32px' },
-                fontWeight: 700
-              }}
-            >
+            <img src={Logo} alt='Résumé Author' style={{ height: isMobile ? '40px' : '50px' }} />
+            <Typography sx={{ fontFamily: 'Poppins', fontSize: { xs: '24px', md: '32px' }, fontWeight: 700 }}>
               Resume Author
             </Typography>
           </Box>
 
           {isMobile ? (
             <>
-              <IconButton
-                color='inherit'
-                aria-label='open menu'
-                onClick={() => setMobileMenuOpen(true)}
-                edge='end'
-              >
+              <IconButton color='inherit' aria-label='open menu' onClick={() => setMobileMenuOpen(true)} edge='end'>
                 <MenuIcon fontSize='large' />
               </IconButton>
-              <Drawer
-                anchor='right'
-                open={mobileMenuOpen}
-                onClose={() => setMobileMenuOpen(false)}
-                PaperProps={{
-                  sx: {
-                    width: '70%',
-                    maxWidth: '300px',
-                    padding: '16px',
-                    backgroundColor: '#FFFFFF'
-                  }
-                }}
-              >
+              <Drawer anchor='right' open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} PaperProps={{ sx: { width: '70%', maxWidth: '300px', padding: '16px', backgroundColor: '#FFFFFF' } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                  <IconButton onClick={() => setMobileMenuOpen(false)}>
-                    <CloseIcon />
-                  </IconButton>
+                  <IconButton onClick={() => setMobileMenuOpen(false)}><CloseIcon /></IconButton>
                 </Box>
                 <List>
-                  {/* Always show Help & FAQ */}
                   <ListItem disablePadding>
-                    <Button
-                      fullWidth
-                      onClick={() => {
-                        navigate('/faq')
-                        setMobileMenuOpen(false)
-                      }}
-                      sx={mobileNavStyles}
-                    >
+                    <Button fullWidth onClick={() => { navigate('/faq'); setMobileMenuOpen(false) }} sx={mobileNavStyles}>
                       Help & FAQ
                     </Button>
                   </ListItem>
-
                   {!isLogged ? (
                     <>
-                      {navItems
-                        .filter(item => item.label !== 'Help & FAQ')
-                        .map((item, index) => (
-                          <ListItem key={index} disablePadding>
-                            <Button fullWidth onClick={item.action} sx={mobileNavStyles}>
-                              {item.label}
-                            </Button>
-                          </ListItem>
-                        ))}
+                      {navItems.filter(item => item.label !== 'Help & FAQ').map((item, i) => (
+                        <ListItem key={i} disablePadding>
+                          <Button fullWidth onClick={item.action} sx={mobileNavStyles}>{item.label}</Button>
+                        </ListItem>
+                      ))}
                       <ListItem disablePadding>
-                        <Button fullWidth onClick={handleLogin} sx={mobileNavStyles}>
-                          Login
-                        </Button>
+                        <Button fullWidth onClick={handleLogin} sx={mobileNavStyles}>Login</Button>
                       </ListItem>
                     </>
                   ) : (
                     <ListItem disablePadding>
-                      <Button fullWidth onClick={handleLogout} sx={mobileNavStyles}>
-                        Logout
-                      </Button>
+                      <Button fullWidth onClick={onLogout} sx={mobileNavStyles}>Logout</Button>
                     </ListItem>
                   )}
                 </List>
@@ -190,33 +98,16 @@ const Nav = () => {
             </>
           ) : !isLogged ? (
             <Stack direction='row' spacing={{ sm: 2, md: 5 }}>
-              {navItems
-                .filter(item => item.label !== 'Help & FAQ')
-                .map((item, index) => (
-                  <Button
-                    key={index}
-                    color='inherit'
-                    sx={navStyles}
-                    onClick={item.action}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              <Button color='inherit' sx={navStyles} onClick={() => navigate('/faq')}>
-                Help & FAQ
-              </Button>
-              <Button onClick={handleLogin} color='inherit' sx={navStyles}>
-                Login
-              </Button>
+              {navItems.filter(item => item.label !== 'Help & FAQ').map((item, i) => (
+                <Button key={i} color='inherit' sx={navStyles} onClick={item.action}>{item.label}</Button>
+              ))}
+              <Button color='inherit' sx={navStyles} onClick={() => navigate('/faq')}>Help & FAQ</Button>
+              <Button color='inherit' sx={navStyles} onClick={handleLogin}>Login</Button>
             </Stack>
           ) : (
             <Stack direction='row' spacing={{ sm: 2, md: 5 }}>
-              <Button color='inherit' sx={navStyles} onClick={() => navigate('/faq')}>
-                Help & FAQ
-              </Button>
-              <Button onClick={handleLogout} color='inherit' sx={navStyles}>
-                Logout
-              </Button>
+              <Button color='inherit' sx={navStyles} onClick={() => navigate('/faq')}>Help & FAQ</Button>
+              <Button color='inherit' sx={navStyles} onClick={onLogout}>Logout</Button>
             </Stack>
           )}
         </Toolbar>

@@ -48,14 +48,6 @@ const normalizeParagraph = (value: Nullable<string | number>): string => {
   return escapeLatex(normalized)
 }
 
-const ensureUrlProtocol = (value: string): string => {
-  if (!value) return ''
-  if (/^https?:\/\//i.test(value)) {
-    return value
-  }
-  return `https://${value}`
-}
-
 const formatDateToken = (value: Nullable<string>): string => {
   if (!value) return ''
   const parsed = new Date(value)

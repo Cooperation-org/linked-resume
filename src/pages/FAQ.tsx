@@ -16,7 +16,7 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import { faqData } from '../utils/constant'
+import { faqData } from '../utils/constants'
 
 const Faq: React.FC = () => {
   const [expanded, setExpanded] = useState<string | false>('panel0')

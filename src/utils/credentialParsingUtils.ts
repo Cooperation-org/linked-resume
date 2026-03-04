@@ -3,6 +3,7 @@
  * These functions are used across the application to extract credential data
  * from various storage formats.
  */
+import { getCredentialName as _getCredentialName } from './credentialUtils'
 
 /**
  * Extracts plain text from HTML content and splits into individual skills.
@@ -217,53 +218,7 @@ export function getPortfolioFromCredentialLink(
 }
 
 /**
- * Gets the name of a credential from various possible locations in the credential object.
- * Provides specialized names for different credential types (employment, volunteer, performance review).
- * 
- * @param credential - Credential object
- * @returns Credential name or 'Credential' as fallback
+ * Gets the name of a credential.
+ * Re-exported from credentialUtils.ts as the single source of truth.
  */
-export function getCredentialName(credential: any): string {
-  try {
-    if (!credential || typeof credential !== 'object') {
-      return 'Credential'
-    }
-
-    // Check root level name first
-    if (credential.name) return credential.name
-
-    const subject = credential.credentialSubject
-    if (!subject || typeof subject !== 'object') {
-      // Check root level achievement
-      if (credential.achievement?.[0]?.name) {
-        return credential.achievement[0].name
-      }
-      return 'Credential'
-    }
-
-    // Performance Review credentials
-    if (subject.employeeName) {
-      return `Performance Review: ${subject.employeeJobTitle || 'Unknown Position'}`
-    }
-
-    // Volunteer credentials
-    if (subject.volunteerWork) {
-      return `Volunteer: ${subject.volunteerWork}`
-    }
-
-    // Employment credentials
-    if (subject.role) {
-      return `Employment: ${subject.role}`
-    }
-
-    // Standard credential name locations
-    if (subject.credentialName) return subject.credentialName
-    if (subject.achievement?.[0]?.name) return subject.achievement[0].name
-    if (subject.name) return subject.name
-    if (subject.title) return subject.title
-
-    return 'Credential'
-  } catch {
-    return 'Credential'
-  }
-}
+export { _getCredentialName as getCredentialName }

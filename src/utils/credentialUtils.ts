@@ -1,4 +1,5 @@
 // Centralized credential handling utilities
+import { generateId } from './resumeTransformers'
 
 export interface SelectedCredential {
   id: string
@@ -109,12 +110,8 @@ export function credentialsToStorageFormat(credentials: SelectedCredential[]): s
   return JSON.stringify(credLinks)
 }
 
-// Generate unique IDs for items
-export function generateUniqueId(prefix: string = 'item'): string {
-  const timestamp = Date.now()
-  const random = Math.random().toString(36).substr(2, 9)
-  return `${prefix}-${timestamp}-${random}`
-}
+// Re-export generateId as generateUniqueId for backwards compatibility
+export const generateUniqueId = generateId
 
 // Deduplicate credentials by ID
 export function deduplicateCredentials(
